@@ -1,0 +1,46 @@
+[
+  {"round":"Dieciseisavos","window":"28 jun – 3 jul","matches":[
+    {"id":"M73","home":"2º Grupo A","away":"2º Grupo B"},
+    {"id":"M74","home":"1º Grupo E","away":"Mejor 3º A/B/C/D/F"},
+    {"id":"M75","home":"1º Grupo F","away":"2º Grupo C"},
+    {"id":"M76","home":"1º Grupo C","away":"2º Grupo F"},
+    {"id":"M77","home":"1º Grupo I","away":"Mejor 3º C/D/F/G/H"},
+    {"id":"M78","home":"2º Grupo E","away":"2º Grupo I"},
+    {"id":"M79","home":"1º Grupo A","away":"Mejor 3º C/E/F/H/I"},
+    {"id":"M80","home":"1º Grupo L","away":"Mejor 3º E/H/I/J/K"},
+    {"id":"M81","home":"1º Grupo G","away":"Mejor 3º A/E/H/I/J"},
+    {"id":"M82","home":"1º Grupo D","away":"Mejor 3º B/E/F/I/J"},
+    {"id":"M83","home":"2º Grupo K","away":"2º Grupo L"},
+    {"id":"M84","home":"1º Grupo H","away":"2º Grupo J"},
+    {"id":"M85","home":"1º Grupo B","away":"Mejor 3º E/F/G/I/J"},
+    {"id":"M86","home":"1º Grupo J","away":"2º Grupo H"},
+    {"id":"M87","home":"1º Grupo K","away":"Mejor 3º D/E/I/J/L"},
+    {"id":"M88","home":"2º Grupo D","away":"2º Grupo G"}
+  ]},
+  {"round":"Octavos","window":"4 – 7 jul","matches":[
+    {"id":"M89","home":"Ganador M73","away":"Ganador M75"},
+    {"id":"M90","home":"Ganador M74","away":"Ganador M77"},
+    {"id":"M91","home":"Ganador M76","away":"Ganador M78"},
+    {"id":"M92","home":"Ganador M79","away":"Ganador M80"},
+    {"id":"M93","home":"Ganador M83","away":"Ganador M84"},
+    {"id":"M94","home":"Ganador M81","away":"Ganador M82"},
+    {"id":"M95","home":"Ganador M86","away":"Ganador M88"},
+    {"id":"M96","home":"Ganador M85","away":"Ganador M87"}
+  ]},
+  {"round":"Cuartos","window":"9 – 11 jul","matches":[
+    {"id":"M97","home":"Ganador M89","away":"Ganador M90"},
+    {"id":"M98","home":"Ganador M93","away":"Ganador M94"},
+    {"id":"M99","home":"Ganador M91","away":"Ganador M92"},
+    {"id":"M100","home":"Ganador M95","away":"Ganador M96"}
+  ]},
+  {"round":"Semifinales","window":"14 – 15 jul","matches":[
+    {"id":"M101","home":"Ganador M97","away":"Ganador M98"},
+    {"id":"M102","home":"Ganador M99","away":"Ganador M100"}
+  ]},
+  {"round":"3º puesto","window":"18 jul","matches":[
+    {"id":"M103","home":"Perdedor M101","away":"Perdedor M102"}
+  ]},
+  {"round":"Final","window":"19 jul","matches":[
+    {"id":"M104","home":"Ganador M101","away":"Ganador M102","final":true}
+  ]}
+]

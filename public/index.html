@@ -1,0 +1,2235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>El Prode Mundialista</title>
+  <style>
+    :root {
+      --bg: #f6f9fe;
+      --panel: #ffffff;
+      --panel-soft: #f7fbff;
+      --line: #d8e4f2;
+      --line-strong: #c7d7ea;
+      --text: #14314f;
+      --muted: #6e829c;
+      --accent: #2364ff;
+      --accent-2: #4cb4ff;
+      --accent-soft: #eaf2ff;
+      --good: #13986d;
+      --warn: #c57e00;
+      --danger: #d94f63;
+      --shadow: 0 18px 46px rgba(20, 49, 79, 0.10);
+      --radius: 24px;
+      --radius-sm: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(35,100,255,0.08), transparent 26%),
+        radial-gradient(circle at top right, rgba(76,180,255,0.14), transparent 34%),
+        linear-gradient(180deg, #fbfdff 0%, #eef5fc 100%);
+    }
+
+    body { padding: 0; }
+
+    .shell {
+      width: min(1280px, calc(100% - 24px));
+      margin: 0 auto;
+      padding: 18px 0 96px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .hero-card, .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card {
+      padding: 22px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::after {
+      content: "⚽";
+      position: absolute;
+      right: 18px;
+      top: 8px;
+      font-size: 72px;
+      opacity: 0.07;
+      transform: rotate(-10deg);
+      pointer-events: none;
+    }
+
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent-soft);
+      border: 1px solid #d5e4ff;
+      color: var(--accent);
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, #eef5ff, #f9fcff);
+      border: 1px solid var(--line);
+      min-width: 210px;
+    }
+
+    .logo-mark {
+      width: 74px;
+      height: 74px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #1f5bff, #58beff);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 12px 24px rgba(35,100,255,0.18);
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .logo-mark svg {
+      width: 58px;
+      height: 58px;
+      display: block;
+    }
+
+    .logo-text-box {
+      min-width: 0;
+    }
+
+    .logo-title {
+      font-size: 16px;
+      font-weight: 900;
+      line-height: 1.05;
+      margin-bottom: 3px;
+    }
+
+    .logo-caption {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    h1 {
+      margin: 14px 0 10px;
+      font-size: clamp(30px, 4vw, 44px);
+      line-height: 1.02;
+    }
+
+    .subtitle {
+      margin: 0;
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    .rules {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .rule-pill {
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      padding: 14px;
+      border-radius: 18px;
+      min-height: 84px;
+    }
+
+    .rule-pill strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 15px;
+    }
+
+    .rule-pill span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .auth-card {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      justify-content: space-between;
+    }
+
+    .auth-title, .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .auth-title h2, .section-title h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .small {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    input, select, button {
+      font: inherit;
+    }
+
+    input[type="text"], input[type="number"], select {
+      width: 100%;
+      background: #fff;
+      border: 1px solid var(--line-strong);
+      color: var(--text);
+      border-radius: 16px;
+      padding: 12px 14px;
+      outline: none;
+      transition: 0.2s ease;
+    }
+
+    input:focus, select:focus {
+      border-color: rgba(35,100,255,0.45);
+      box-shadow: 0 0 0 4px rgba(35,100,255,0.10);
+    }
+
+    button {
+      border: none;
+      border-radius: 16px;
+      padding: 12px 14px;
+      cursor: pointer;
+      font-weight: 800;
+      transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button:disabled { opacity: 0.58; cursor: not-allowed; transform: none; }
+
+    .btn-primary {
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 10px 24px rgba(35,100,255,0.18);
+    }
+
+    .btn-secondary {
+      color: var(--text);
+      background: #fff;
+      border: 1px solid var(--line-strong);
+    }
+
+    .btn-google {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      min-height: 52px;
+      width: 100%;
+      color: var(--text);
+      background: #fff;
+      border: 1px solid var(--line-strong);
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr auto auto;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .pill {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: #fff;
+      border: 1px solid var(--line);
+      min-height: 52px;
+      box-shadow: 0 8px 18px rgba(20, 49, 79, 0.05);
+    }
+
+    .view-tabs {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0,1fr));
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .view-tab {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      min-height: 50px;
+      background: #fff;
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 18px;
+      font-weight: 800;
+    }
+
+    .view-tab.active {
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      border-color: transparent;
+      box-shadow: 0 10px 22px rgba(35,100,255,0.15);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .tab {
+      background: #fff;
+      border: 1px solid var(--line);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .tab.active {
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      border-color: transparent;
+      box-shadow: 0 10px 22px rgba(35,100,255,0.15);
+    }
+
+    .view-panel {
+      display: none;
+    }
+
+    .view-panel.active {
+      display: block;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.25fr 0.85fr;
+      gap: 18px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .summary-card {
+      padding: 16px;
+      border-radius: 20px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .summary-card .value {
+      font-size: 28px;
+      font-weight: 900;
+      line-height: 1;
+      margin: 8px 0 4px;
+    }
+
+    .summary-card .label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .fixture-stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .argentina-highlight {
+      background: linear-gradient(135deg, #eef7ff, #ffffff);
+      border-color: #cfe3ff;
+    }
+
+    .card {
+      padding: 18px;
+    }
+
+    .fixture-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .match-card {
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 14px;
+    }
+
+    .match-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+      color: var(--muted);
+      font-size: 13px;
+      flex-wrap: wrap;
+    }
+
+    .match-body {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .team {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .team.right {
+      justify-content: flex-end;
+      text-align: right;
+    }
+
+    .flag {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: #fff;
+      border: 1px solid var(--line);
+      flex-shrink: 0;
+      overflow: hidden;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.75);
+      position: relative;
+    }
+
+    .flag-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .flag-fallback {
+      width: 100%;
+      height: 100%;
+      display: none;
+      place-items: center;
+      font-size: 22px;
+      background: #fff;
+      color: var(--text);
+      font-weight: 800;
+    }
+
+    .mini-flag {
+      width: 18px;
+      height: 14px;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: #fff;
+      display: inline-grid;
+      place-items: center;
+      vertical-align: middle;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .mini-flag img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .mini-flag .flag-fallback {
+      font-size: 9px;
+      font-weight: 800;
+    }
+
+    .inline-flag-pair {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .team-name {
+      font-weight: 800;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .team-meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .score-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .score-box input {
+      width: 68px;
+      text-align: center;
+      padding: 12px 6px;
+      font-size: 18px;
+      font-weight: 800;
+      border-radius: 16px;
+    }
+
+    .score-sep {
+      font-size: 20px;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .deadline-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .match-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .tag.good {
+      color: #0c6e4d;
+      border-color: #b6e6d0;
+      background: #ebfaf3;
+    }
+
+    .tag.warn {
+      color: #8f6205;
+      border-color: #f0d39d;
+      background: #fff6e4;
+    }
+
+    .tag.accent {
+      color: var(--accent);
+      border-color: #d4e4ff;
+      background: var(--accent-soft);
+    }
+
+    .tag.bad {
+      color: #a53445;
+      border-color: #f0c0c8;
+      background: #fff1f3;
+    }
+
+    .notice {
+      margin-bottom: 12px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: #fff7df;
+      border: 1px solid #efd18b;
+      color: #8a6200;
+      line-height: 1.55;
+    }
+
+    .panel-note, .empty {
+      padding: 16px;
+      border-radius: 18px;
+      color: var(--muted);
+      background: #fff;
+      border: 1px dashed var(--line-strong);
+      line-height: 1.6;
+    }
+
+    .standings-table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 16px;
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+
+    .standings-table th,
+    .standings-table td {
+      padding: 12px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+      font-size: 14px;
+    }
+
+    .standings-table th {
+      color: #60748f;
+      font-weight: 800;
+      background: #f7fbff;
+    }
+
+    .standings-table tr.highlight {
+      background: #eef5ff;
+    }
+
+    .fixture-mini, .fixture-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 14px;
+    }
+
+    .fixture-mini:last-child,
+    .fixture-row:last-child { border-bottom: none; }
+
+    .fixture-day {
+      padding: 14px 0 4px;
+      font-size: 13px;
+      font-weight: 900;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .bracket-wrap {
+      overflow-x: auto;
+      padding-bottom: 6px;
+    }
+
+    .bracket-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(220px, 1fr));
+      gap: 16px;
+      min-width: 1360px;
+      align-items: start;
+    }
+
+    .bracket-column {
+      position: relative;
+      display: grid;
+      gap: 12px;
+    }
+
+    .bracket-column:not(:last-child)::after {
+      content: '→';
+      position: absolute;
+      top: 8px;
+      right: -12px;
+      color: var(--accent);
+      font-weight: 900;
+      opacity: 0.5;
+    }
+
+    .bracket-round-title {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 12px 14px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #eef5ff, #f9fcff);
+      border: 1px solid var(--line);
+      font-weight: 900;
+    }
+
+    .bracket-round-title small {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .bracket-match {
+      padding: 12px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      box-shadow: 0 10px 22px rgba(20,49,79,0.06);
+    }
+
+    .bracket-match.final {
+      border-color: #d4e4ff;
+      background: linear-gradient(135deg, #eef5ff, #ffffff);
+    }
+
+    .bracket-match-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .bracket-team {
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: #fff;
+      border: 1px solid var(--line);
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .bracket-team:last-child {
+      margin-bottom: 0;
+    }
+
+    .bracket-note {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .admin-box {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      display: grid;
+      gap: 10px;
+    }
+
+    .result-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: white;
+      font-size: 18px;
+      font-weight: 900;
+      flex-shrink: 0;
+      box-shadow: 0 10px 24px rgba(35,100,255,0.16);
+    }
+
+    .mobile-nav {
+      position: fixed;
+      left: 12px;
+      bottom: max(12px, env(safe-area-inset-bottom));
+      transform: none;
+      width: min(calc(100% - 24px), 420px);
+      background: rgba(255,255,255,0.92);
+      border: 1px solid rgba(199,215,234,0.95);
+      box-shadow: 0 18px 38px rgba(20,49,79,0.16);
+      border-radius: 22px;
+      padding: 8px;
+      display: none;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      backdrop-filter: blur(12px);
+      z-index: 20;
+    }
+
+    .mobile-nav button {
+      min-height: 58px;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid transparent;
+      padding: 8px 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .mobile-nav button.active {
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-color: #d7e5ff;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 1100px) {
+      .hero, .grid, .topbar, .cards-grid, .summary-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 820px) {
+      .view-tabs {
+        display: none;
+      }
+      .mobile-nav {
+        display: grid;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .shell {
+        width: min(100% - 16px, 1280px);
+        padding-top: 12px;
+      }
+
+      .hero-card, .card, .auth-card, .summary-card {
+        padding: 16px;
+        border-radius: 20px;
+      }
+
+      .rules { grid-template-columns: 1fr; }
+      .match-body { grid-template-columns: 1fr; }
+      .team.right { justify-content: flex-start; text-align: left; }
+      .score-box { justify-content: space-between; }
+      .score-box input { width: 100%; }
+      .match-footer { flex-direction: column; align-items: stretch; }
+      .match-footer button { width: 100%; }
+      .standings-table th:nth-child(4),
+      .standings-table td:nth-child(4),
+      .standings-table th:nth-child(5),
+      .standings-table td:nth-child(5) {
+        display: none;
+      }
+      .logo-wrap { width: 100%; }
+    }
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="hero-card">
+        <div class="hero-top">
+          <div>
+            <div class="brand-badge">🧉⚽ El Prode Mundialista</div>
+            <h1>La quiniela mundialera de la familia.</h1>
+            <p class="subtitle">
+              Una app familiar, argenta y fácil de usar desde el celu: entrás con Google, ves el resumen, seguís la tabla, apostás por fecha y revisás el fixture del Mundial 2026 con banderas reales.
+            </p>
+          </div>
+          <div class="logo-wrap" aria-label="Logo de El Prode Mundialista">
+            <div class="logo-mark">
+              <svg viewBox="0 0 64 64" aria-hidden="true">
+                <defs>
+                  <linearGradient id="jpCup" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.96" />
+                    <stop offset="100%" stop-color="#e8f3ff" stop-opacity="0.92" />
+                  </linearGradient>
+                </defs>
+                <circle cx="32" cy="32" r="30" fill="rgba(255,255,255,0.12)" />
+                <path d="M22 16h20v6c0 7-4.7 12.5-10 14.1-5.3-1.6-10-7.1-10-14.1z" fill="url(#jpCup)" />
+                <path d="M18 18h4v5c0 3.8-2.7 7-6.4 7.7L14 31v-4.5c2.3-.4 4-2.2 4-4.5z" fill="url(#jpCup)" />
+                <path d="M46 18h4v4.5c0 2.3 1.7 4.1 4 4.5V31l-1.6-.3C48.7 30 46 26.8 46 23z" fill="url(#jpCup)" />
+                <rect x="29" y="36" width="6" height="8" rx="2" fill="url(#jpCup)" />
+                <rect x="22" y="44" width="20" height="5" rx="2.5" fill="url(#jpCup)" />
+                <path d="M24 24h6v4h-6zM34 24h6v4h-6z" fill="#1f5bff" opacity="0.65" />
+                <path d="M27 19c2.2 1 4 2.8 5 5 1-2.2 2.8-4 5-5-2.2-1-4-2.8-5-5-1 2.2-2.8 4-5 5z" fill="#58beff" opacity="0.95" />
+              </svg>
+            </div>
+            <div class="logo-text-box">
+              <div class="logo-title">El Prode Mundialista</div>
+              <div class="logo-caption">Mundial 2026 · familia, puntos y gloria casera · edición jp_renegado</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rules">
+          <div class="rule-pill">
+            <strong>🎯 4 puntos por exacto</strong>
+            <span>Si acertás el marcador completo del partido.</span>
+          </div>
+          <div class="rule-pill">
+            <strong>✅ 2 puntos por signo</strong>
+            <span>Si acertás ganador o empate, aunque no lo claves exacto.</span>
+          </div>
+          <div class="rule-pill">
+            <strong>🏁 Jugar siempre suma</strong>
+            <span>Si apostaste y no acertaste, sumás 1. Si no jugaste ese partido, sumás 0.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="auth-card hero-card">
+        <div class="auth-title">
+          <h2>🔐 Acceso</h2>
+          <span class="small">Google + Firebase</span>
+        </div>
+
+        <div id="setupNotice" class="notice hidden"></div>
+
+        <div class="row">
+          <button id="googleLoginBtn" class="btn-google">
+            <span>🟢</span>
+            <span>Entrar con Google</span>
+          </button>
+        </div>
+
+        <div id="signedInBox" class="hidden">
+          <div class="row">
+            <div id="userAvatar" class="avatar">J</div>
+            <div>
+              <div id="authUserName" style="font-weight: 800;">Juan Pablo</div>
+              <div id="authUserEmail" class="small">usuario@email.com</div>
+            </div>
+          </div>
+          <div class="small">Tu pronóstico queda guardado por usuario y se comparte con toda la familia. Exacto = 4, signo = 2, fallo con apuesta = 1, sin jugar = 0.</div>
+        </div>
+
+        <div id="signedOutHint" class="small hidden">
+          Entrá con Google para que cada familiar tenga su usuario y su tabla.
+        </div>
+
+        <div class="row">
+          <button id="logoutBtn" class="btn-secondary">Cerrar sesión</button>
+        </div>
+
+        <div class="small">
+          Si todavía no pegaste tu configuración, la app entra en <strong>modo demo local</strong>. El login real y el backend se activan completando <code>FIREBASE_CONFIG</code> y habilitando Google en Firebase Authentication.
+        </div>
+      </div>
+    </section>
+
+    <div id="appContent">
+      <section class="topbar">
+        <div class="pill"><span>🙋</span><strong id="currentUserLabel">Juan Pablo</strong></div>
+        <div class="pill"><span>📅</span><span id="nextMatchLabel">Próximo partido</span></div>
+        <div class="pill"><span>⭐</span><span id="userPointsLabel">0 pts</span></div>
+        <button id="refreshBtn" class="btn-secondary">Actualizar</button>
+      </section>
+
+      <section class="view-tabs" id="viewTabs">
+        <button class="view-tab active" data-view="resumen">🏠 Resumen</button>
+        <button class="view-tab" data-view="apuestas">🎯 Apuestas</button>
+        <button class="view-tab" data-view="clasificacion">🥇 Clasificación</button>
+        <button class="view-tab" data-view="fixture">🗓️ Fixture</button>
+        <button class="view-tab hidden" data-view="admin" id="desktopAdminTab">⚙️ Admin</button>
+      </section>
+
+      <section id="view-resumen" class="view-panel active">
+        <div class="summary-grid" id="summaryGrid"></div>
+        <div class="cards-grid">
+          <div class="card">
+            <div class="section-title">
+              <h3>📍 Próxima fecha</h3>
+              <span class="small">Lo que viene</span>
+            </div>
+            <div id="nextRoundWrap"></div>
+          </div>
+          <div class="card">
+            <div class="section-title">
+              <h3>🏆 Podio familiar</h3>
+              <span class="small">Top 3</span>
+            </div>
+            <div id="podiumWrap"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-apuestas" class="view-panel">
+        <section class="tabs" id="tabs"></section>
+        <div class="card">
+          <div class="section-title">
+            <h3 id="matchesTitle">🎯 Apuestas</h3>
+            <span class="small" id="matchCountLabel"></span>
+          </div>
+          <div id="matchList" class="fixture-list"></div>
+        </div>
+      </section>
+
+      <section id="view-clasificacion" class="view-panel">
+        <div class="card">
+          <div class="section-title">
+            <h3>🥇 Clasificación general</h3>
+            <span class="small">Puntaje en tiempo real</span>
+          </div>
+          <div id="standingsWrap"></div>
+        </div>
+      </section>
+
+      <section id="view-fixture" class="view-panel">
+        <div class="fixture-stack">
+          <div class="card argentina-highlight">
+            <div class="section-title">
+              <h3>🇦🇷 Partidos de Argentina</h3>
+              <span class="small">Seguimiento especial de la Scaloneta</span>
+            </div>
+            <div id="argentinaMatchesWrap"></div>
+          </div>
+          <div class="card">
+            <div class="section-title">
+              <h3>🗓️ Fixture completo</h3>
+              <span class="small">Fase de grupos</span>
+            </div>
+            <div id="fullFixtureWrap"></div>
+          </div>
+          <div class="card">
+            <div class="section-title">
+              <h3>🏆 Cuadro final</h3>
+              <span class="small">Cruces hasta la final</span>
+            </div>
+            <div id="knockoutBracketWrap"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-admin" class="view-panel">
+        <div class="card">
+          <div class="section-title">
+            <h3>⚙️ Administración</h3>
+            <span class="small">Resultados y siembra</span>
+          </div>
+          <div id="adminDisabledNote" class="panel-note">
+            Esta zona sólo aparece si la cuenta logueada está incluida en <code>ADMIN_EMAILS</code>.
+          </div>
+          <div id="adminPanel" class="hidden">
+            <div class="small">Desde acá podés sembrar el fixture oficial 2026 en Firestore y cargar resultados manualmente. También se puede automatizar con una función programada que consulte una API de resultados cada hora.</div>
+            <div class="admin-box">
+              <button id="seedFixtureBtn" class="btn-primary">Sembrar fixture 2026 en Firebase</button>
+              <select id="adminMatchSelect"></select>
+              <div class="row">
+                <input id="adminHomeScore" type="number" min="0" placeholder="Goles local" />
+                <input id="adminAwayScore" type="number" min="0" placeholder="Goles visitante" />
+              </div>
+              <div class="result-actions">
+                <button id="saveResultBtn" class="btn-primary">Guardar resultado</button>
+                <button id="clearResultBtn" class="btn-secondary">Quitar resultado</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <nav class="mobile-nav" id="mobileNav">
+    <button class="active" data-view="resumen"><span>🏠</span><span>Resumen</span></button>
+    <button data-view="apuestas"><span>🎯</span><span>Apuestas</span></button>
+    <button data-view="clasificacion"><span>🥇</span><span>Tabla</span></button>
+    <button data-view="fixture"><span>🗓️</span><span>Fixture</span></button>
+    <button class="hidden" data-view="admin" id="mobileAdminTab"><span>⚙️</span><span>Admin</span></button>
+  </nav>
+
+  <script>
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyBfhmfqoGIEaXx15IfzbWhpxhVZbPa19aQ",
+      authDomain: "el-prode-mundialista.firebaseapp.com",
+      projectId: "el-prode-mundialista",
+      storageBucket: "el-prode-mundialista.firebasestorage.app",
+      messagingSenderId: "883869494864",
+      appId: "1:883869494864:web:3dc5e9138e7af679bc6b55",
+      measurementId: "G-KYRG0SHC8E"
+    };
+
+    const ADMIN_EMAILS = ['gerbijuan@gmail.com'];
+    const PREVIEW_STORAGE_KEY = 'prode-juanpi-preview-v3';
+
+    const FLAG_CODE_BY_TEAM = {
+      'México': 'mx', 'Sudáfrica': 'za', 'Corea del Sur': 'kr', 'Chequia': 'cz', 'Canadá': 'ca', 'Bosnia y Herzegovina': 'ba',
+      'Estados Unidos': 'us', 'Paraguay': 'py', 'Qatar': 'qa', 'Suiza': 'ch', 'Brasil': 'br', 'Marruecos': 'ma', 'Haití': 'ht',
+      'Escocia': 'scotland', 'Australia': 'au', 'Turquía': 'tr', 'Alemania': 'de', 'Curazao': 'cw', 'Países Bajos': 'nl', 'Japón': 'jp',
+      'Costa de Marfil': 'ci', 'Ecuador': 'ec', 'Suecia': 'se', 'Túnez': 'tn', 'España': 'es', 'Cabo Verde': 'cv', 'Bélgica': 'be',
+      'Egipto': 'eg', 'Arabia Saudita': 'sa', 'Uruguay': 'uy', 'Irán': 'ir', 'Nueva Zelanda': 'nz', 'Francia': 'fr', 'Senegal': 'sn',
+      'Irak': 'iq', 'Noruega': 'no', 'Argentina': 'ar', 'Argelia': 'dz', 'Austria': 'at', 'Jordania': 'jo', 'Portugal': 'pt',
+      'RD Congo': 'cd', 'Inglaterra': 'england', 'Croacia': 'hr', 'Ghana': 'gh', 'Panamá': 'pa', 'Uzbekistán': 'uz', 'Colombia': 'co'
+    };
+
+    const KNOCKOUT_BRACKET = [
+      {
+        round: 'Dieciseisavos',
+        window: '28 jun – 3 jul',
+        matches: [
+          { id: 'M73', home: '2º Grupo A', away: '2º Grupo B' },
+          { id: 'M74', home: '1º Grupo E', away: 'Mejor 3º A/B/C/D/F' },
+          { id: 'M75', home: '1º Grupo F', away: '2º Grupo C' },
+          { id: 'M76', home: '1º Grupo C', away: '2º Grupo F' },
+          { id: 'M77', home: '1º Grupo I', away: 'Mejor 3º C/D/F/G/H' },
+          { id: 'M78', home: '2º Grupo E', away: '2º Grupo I' },
+          { id: 'M79', home: '1º Grupo A', away: 'Mejor 3º C/E/F/H/I' },
+          { id: 'M80', home: '1º Grupo L', away: 'Mejor 3º E/H/I/J/K' },
+          { id: 'M81', home: '1º Grupo G', away: 'Mejor 3º A/E/H/I/J' },
+          { id: 'M82', home: '1º Grupo D', away: 'Mejor 3º B/E/F/I/J' },
+          { id: 'M83', home: '2º Grupo K', away: '2º Grupo L' },
+          { id: 'M84', home: '1º Grupo H', away: '2º Grupo J' },
+          { id: 'M85', home: '1º Grupo B', away: 'Mejor 3º E/F/G/I/J' },
+          { id: 'M86', home: '1º Grupo J', away: '2º Grupo H' },
+          { id: 'M87', home: '1º Grupo K', away: 'Mejor 3º D/E/I/J/L' },
+          { id: 'M88', home: '2º Grupo D', away: '2º Grupo G' }
+        ]
+      },
+      {
+        round: 'Octavos',
+        window: '4 – 7 jul',
+        matches: [
+          { id: 'M89', home: 'Ganador M73', away: 'Ganador M75' },
+          { id: 'M90', home: 'Ganador M74', away: 'Ganador M77' },
+          { id: 'M91', home: 'Ganador M76', away: 'Ganador M78' },
+          { id: 'M92', home: 'Ganador M79', away: 'Ganador M80' },
+          { id: 'M93', home: 'Ganador M83', away: 'Ganador M84' },
+          { id: 'M94', home: 'Ganador M81', away: 'Ganador M82' },
+          { id: 'M95', home: 'Ganador M86', away: 'Ganador M88' },
+          { id: 'M96', home: 'Ganador M85', away: 'Ganador M87' }
+        ]
+      },
+      {
+        round: 'Cuartos',
+        window: '9 – 11 jul',
+        matches: [
+          { id: 'M97', home: 'Ganador M89', away: 'Ganador M90' },
+          { id: 'M98', home: 'Ganador M93', away: 'Ganador M94' },
+          { id: 'M99', home: 'Ganador M91', away: 'Ganador M92' },
+          { id: 'M100', home: 'Ganador M95', away: 'Ganador M96' }
+        ]
+      },
+      {
+        round: 'Semifinales',
+        window: '14 – 15 jul',
+        matches: [
+          { id: 'M101', home: 'Ganador M97', away: 'Ganador M98' },
+          { id: 'M102', home: 'Ganador M99', away: 'Ganador M100' }
+        ]
+      },
+      {
+        round: '3º puesto',
+        window: '18 jul',
+        matches: [
+          { id: 'M103', home: 'Perdedor M101', away: 'Perdedor M102' }
+        ]
+      },
+      {
+        round: 'Final',
+        window: '19 jul',
+        matches: [
+          { id: 'M104', home: 'Ganador M101', away: 'Ganador M102', final: true }
+        ]
+      }
+    ];
+
+    const OFFICIAL_FIXTURE = [
+      { id: 'gs-001', stage: 'Fase de grupos', group: 'A', dateKey: '2026-06-11', kickoffAt: '2026-06-11T19:00:00Z', venue: 'Ciudad de México, México', homeTeam: 'México', awayTeam: 'Sudáfrica', sortOrder: 1 },
+      { id: 'gs-002', stage: 'Fase de grupos', group: 'A', dateKey: '2026-06-12', kickoffAt: '2026-06-12T02:00:00Z', venue: 'Guadalajara, México', homeTeam: 'Corea del Sur', awayTeam: 'Chequia', sortOrder: 2 },
+      { id: 'gs-003', stage: 'Fase de grupos', group: 'B', dateKey: '2026-06-12', kickoffAt: '2026-06-12T19:00:00Z', venue: 'Toronto, Canadá', homeTeam: 'Canadá', awayTeam: 'Bosnia y Herzegovina', sortOrder: 3 },
+      { id: 'gs-004', stage: 'Fase de grupos', group: 'D', dateKey: '2026-06-13', kickoffAt: '2026-06-13T01:00:00Z', venue: 'Los Ángeles, EE. UU.', homeTeam: 'Estados Unidos', awayTeam: 'Paraguay', sortOrder: 4 },
+      { id: 'gs-005', stage: 'Fase de grupos', group: 'B', dateKey: '2026-06-13', kickoffAt: '2026-06-13T19:00:00Z', venue: 'Santa Clara, EE. UU.', homeTeam: 'Qatar', awayTeam: 'Suiza', sortOrder: 5 },
+      { id: 'gs-006', stage: 'Fase de grupos', group: 'C', dateKey: '2026-06-13', kickoffAt: '2026-06-13T22:00:00Z', venue: 'Nueva Jersey, EE. UU.', homeTeam: 'Brasil', awayTeam: 'Marruecos', sortOrder: 6 },
+      { id: 'gs-007', stage: 'Fase de grupos', group: 'C', dateKey: '2026-06-14', kickoffAt: '2026-06-14T01:00:00Z', venue: 'Foxborough, EE. UU.', homeTeam: 'Haití', awayTeam: 'Escocia', sortOrder: 7 },
+      { id: 'gs-008', stage: 'Fase de grupos', group: 'D', dateKey: '2026-06-14', kickoffAt: '2026-06-14T04:00:00Z', venue: 'Vancouver, Canadá', homeTeam: 'Australia', awayTeam: 'Turquía', sortOrder: 8 },
+      { id: 'gs-009', stage: 'Fase de grupos', group: 'E', dateKey: '2026-06-14', kickoffAt: '2026-06-14T17:00:00Z', venue: 'Houston, EE. UU.', homeTeam: 'Alemania', awayTeam: 'Curazao', sortOrder: 9 },
+      { id: 'gs-010', stage: 'Fase de grupos', group: 'F', dateKey: '2026-06-14', kickoffAt: '2026-06-14T20:00:00Z', venue: 'Arlington, EE. UU.', homeTeam: 'Países Bajos', awayTeam: 'Japón', sortOrder: 10 },
+      { id: 'gs-011', stage: 'Fase de grupos', group: 'E', dateKey: '2026-06-15', kickoffAt: '2026-06-14T23:00:00Z', venue: 'Filadelfia, EE. UU.', homeTeam: 'Costa de Marfil', awayTeam: 'Ecuador', sortOrder: 11 },
+      { id: 'gs-012', stage: 'Fase de grupos', group: 'F', dateKey: '2026-06-15', kickoffAt: '2026-06-15T02:00:00Z', venue: 'Guadalajara, México', homeTeam: 'Suecia', awayTeam: 'Túnez', sortOrder: 12 },
+      { id: 'gs-013', stage: 'Fase de grupos', group: 'H', dateKey: '2026-06-15', kickoffAt: '2026-06-15T16:00:00Z', venue: 'Atlanta, EE. UU.', homeTeam: 'España', awayTeam: 'Cabo Verde', sortOrder: 13 },
+      { id: 'gs-014', stage: 'Fase de grupos', group: 'G', dateKey: '2026-06-15', kickoffAt: '2026-06-15T19:00:00Z', venue: 'Seattle, EE. UU.', homeTeam: 'Bélgica', awayTeam: 'Egipto', sortOrder: 14 },
+      { id: 'gs-015', stage: 'Fase de grupos', group: 'H', dateKey: '2026-06-15', kickoffAt: '2026-06-15T22:00:00Z', venue: 'Miami, EE. UU.', homeTeam: 'Arabia Saudita', awayTeam: 'Uruguay', sortOrder: 15 },
+      { id: 'gs-016', stage: 'Fase de grupos', group: 'G', dateKey: '2026-06-16', kickoffAt: '2026-06-16T01:00:00Z', venue: 'Los Ángeles, EE. UU.', homeTeam: 'Irán', awayTeam: 'Nueva Zelanda', sortOrder: 16 },
+      { id: 'gs-017', stage: 'Fase de grupos', group: 'I', dateKey: '2026-06-16', kickoffAt: '2026-06-16T19:00:00Z', venue: 'Nueva Jersey, EE. UU.', homeTeam: 'Francia', awayTeam: 'Senegal', sortOrder: 17 },
+      { id: 'gs-018', stage: 'Fase de grupos', group: 'I', dateKey: '2026-06-16', kickoffAt: '2026-06-16T22:00:00Z', venue: 'Foxborough, EE. UU.', homeTeam: 'Irak', awayTeam: 'Noruega', sortOrder: 18 },
+      { id: 'gs-019', stage: 'Fase de grupos', group: 'J', dateKey: '2026-06-17', kickoffAt: '2026-06-17T01:00:00Z', venue: 'Kansas City, EE. UU.', homeTeam: 'Argentina', awayTeam: 'Argelia', sortOrder: 19 },
+      { id: 'gs-020', stage: 'Fase de grupos', group: 'J', dateKey: '2026-06-17', kickoffAt: '2026-06-17T04:00:00Z', venue: 'Santa Clara, EE. UU.', homeTeam: 'Austria', awayTeam: 'Jordania', sortOrder: 20 },
+      { id: 'gs-021', stage: 'Fase de grupos', group: 'K', dateKey: '2026-06-17', kickoffAt: '2026-06-17T17:00:00Z', venue: 'Houston, EE. UU.', homeTeam: 'Portugal', awayTeam: 'RD Congo', sortOrder: 21 },
+      { id: 'gs-022', stage: 'Fase de grupos', group: 'L', dateKey: '2026-06-17', kickoffAt: '2026-06-17T20:00:00Z', venue: 'Arlington, EE. UU.', homeTeam: 'Inglaterra', awayTeam: 'Croacia', sortOrder: 22 },
+      { id: 'gs-023', stage: 'Fase de grupos', group: 'L', dateKey: '2026-06-18', kickoffAt: '2026-06-17T23:00:00Z', venue: 'Toronto, Canadá', homeTeam: 'Ghana', awayTeam: 'Panamá', sortOrder: 23 },
+      { id: 'gs-024', stage: 'Fase de grupos', group: 'K', dateKey: '2026-06-18', kickoffAt: '2026-06-18T02:00:00Z', venue: 'Ciudad de México, México', homeTeam: 'Uzbekistán', awayTeam: 'Colombia', sortOrder: 24 },
+      { id: 'gs-025', stage: 'Fase de grupos', group: 'A', dateKey: '2026-06-18', kickoffAt: '2026-06-18T16:00:00Z', venue: 'Atlanta, EE. UU.', homeTeam: 'Chequia', awayTeam: 'Sudáfrica', sortOrder: 25 },
+      { id: 'gs-026', stage: 'Fase de grupos', group: 'B', dateKey: '2026-06-18', kickoffAt: '2026-06-18T19:00:00Z', venue: 'Los Ángeles, EE. UU.', homeTeam: 'Suiza', awayTeam: 'Bosnia y Herzegovina', sortOrder: 26 },
+      { id: 'gs-027', stage: 'Fase de grupos', group: 'B', dateKey: '2026-06-18', kickoffAt: '2026-06-18T22:00:00Z', venue: 'Vancouver, Canadá', homeTeam: 'Canadá', awayTeam: 'Qatar', sortOrder: 27 },
+      { id: 'gs-028', stage: 'Fase de grupos', group: 'A', dateKey: '2026-06-19', kickoffAt: '2026-06-19T01:00:00Z', venue: 'Guadalajara, México', homeTeam: 'México', awayTeam: 'Corea del Sur', sortOrder: 28 },
+      { id: 'gs-029', stage: 'Fase de grupos', group: 'D', dateKey: '2026-06-19', kickoffAt: '2026-06-19T19:00:00Z', venue: 'Seattle, EE. UU.', homeTeam: 'Estados Unidos', awayTeam: 'Australia', sortOrder: 29 },
+      { id: 'gs-030', stage: 'Fase de grupos', group: 'C', dateKey: '2026-06-19', kickoffAt: '2026-06-19T22:00:00Z', venue: 'Foxborough, EE. UU.', homeTeam: 'Escocia', awayTeam: 'Marruecos', sortOrder: 30 },
+      { id: 'gs-031', stage: 'Fase de grupos', group: 'C', dateKey: '2026-06-20', kickoffAt: '2026-06-20T00:30:00Z', venue: 'Filadelfia, EE. UU.', homeTeam: 'Brasil', awayTeam: 'Haití', sortOrder: 31 },
+      { id: 'gs-032', stage: 'Fase de grupos', group: 'D', dateKey: '2026-06-20', kickoffAt: '2026-06-20T03:00:00Z', venue: 'Santa Clara, EE. UU.', homeTeam: 'Turquía', awayTeam: 'Paraguay', sortOrder: 32 },
+      { id: 'gs-033', stage: 'Fase de grupos', group: 'F', dateKey: '2026-06-20', kickoffAt: '2026-06-20T17:00:00Z', venue: 'Houston, EE. UU.', homeTeam: 'Países Bajos', awayTeam: 'Suecia', sortOrder: 33 },
+      { id: 'gs-034', stage: 'Fase de grupos', group: 'E', dateKey: '2026-06-20', kickoffAt: '2026-06-20T20:00:00Z', venue: 'Toronto, Canadá', homeTeam: 'Alemania', awayTeam: 'Costa de Marfil', sortOrder: 34 },
+      { id: 'gs-035', stage: 'Fase de grupos', group: 'E', dateKey: '2026-06-21', kickoffAt: '2026-06-21T00:00:00Z', venue: 'Kansas City, EE. UU.', homeTeam: 'Ecuador', awayTeam: 'Curazao', sortOrder: 35 },
+      { id: 'gs-036', stage: 'Fase de grupos', group: 'F', dateKey: '2026-06-21', kickoffAt: '2026-06-21T04:00:00Z', venue: 'Guadalajara, México', homeTeam: 'Túnez', awayTeam: 'Japón', sortOrder: 36 },
+      { id: 'gs-037', stage: 'Fase de grupos', group: 'H', dateKey: '2026-06-21', kickoffAt: '2026-06-21T16:00:00Z', venue: 'Atlanta, EE. UU.', homeTeam: 'España', awayTeam: 'Arabia Saudita', sortOrder: 37 },
+      { id: 'gs-038', stage: 'Fase de grupos', group: 'G', dateKey: '2026-06-21', kickoffAt: '2026-06-21T19:00:00Z', venue: 'Los Ángeles, EE. UU.', homeTeam: 'Bélgica', awayTeam: 'Irán', sortOrder: 38 },
+      { id: 'gs-039', stage: 'Fase de grupos', group: 'H', dateKey: '2026-06-21', kickoffAt: '2026-06-21T22:00:00Z', venue: 'Miami, EE. UU.', homeTeam: 'Uruguay', awayTeam: 'Cabo Verde', sortOrder: 39 },
+      { id: 'gs-040', stage: 'Fase de grupos', group: 'G', dateKey: '2026-06-22', kickoffAt: '2026-06-22T01:00:00Z', venue: 'Vancouver, Canadá', homeTeam: 'Nueva Zelanda', awayTeam: 'Egipto', sortOrder: 40 },
+      { id: 'gs-041', stage: 'Fase de grupos', group: 'J', dateKey: '2026-06-22', kickoffAt: '2026-06-22T17:00:00Z', venue: 'Arlington, EE. UU.', homeTeam: 'Argentina', awayTeam: 'Austria', sortOrder: 41 },
+      { id: 'gs-042', stage: 'Fase de grupos', group: 'I', dateKey: '2026-06-22', kickoffAt: '2026-06-22T21:00:00Z', venue: 'Filadelfia, EE. UU.', homeTeam: 'Francia', awayTeam: 'Irak', sortOrder: 42 },
+      { id: 'gs-043', stage: 'Fase de grupos', group: 'I', dateKey: '2026-06-23', kickoffAt: '2026-06-23T00:00:00Z', venue: 'Toronto, Canadá', homeTeam: 'Noruega', awayTeam: 'Senegal', sortOrder: 43 },
+      { id: 'gs-044', stage: 'Fase de grupos', group: 'J', dateKey: '2026-06-23', kickoffAt: '2026-06-23T03:00:00Z', venue: 'Santa Clara, EE. UU.', homeTeam: 'Jordania', awayTeam: 'Argelia', sortOrder: 44 },
+      { id: 'gs-045', stage: 'Fase de grupos', group: 'K', dateKey: '2026-06-23', kickoffAt: '2026-06-23T17:00:00Z', venue: 'Houston, EE. UU.', homeTeam: 'Portugal', awayTeam: 'Uzbekistán', sortOrder: 45 },
+      { id: 'gs-046', stage: 'Fase de grupos', group: 'L', dateKey: '2026-06-23', kickoffAt: '2026-06-23T20:00:00Z', venue: 'Foxborough, EE. UU.', homeTeam: 'Inglaterra', awayTeam: 'Ghana', sortOrder: 46 },
+      { id: 'gs-047', stage: 'Fase de grupos', group: 'L', dateKey: '2026-06-24', kickoffAt: '2026-06-23T23:00:00Z', venue: 'Foxborough, EE. UU.', homeTeam: 'Panamá', awayTeam: 'Croacia', sortOrder: 47 },
+      { id: 'gs-048', stage: 'Fase de grupos', group: 'K', dateKey: '2026-06-24', kickoffAt: '2026-06-24T02:00:00Z', venue: 'Guadalajara, México', homeTeam: 'Colombia', awayTeam: 'RD Congo', sortOrder: 48 },
+      { id: 'gs-049', stage: 'Fase de grupos', group: 'B', dateKey: '2026-06-24', kickoffAt: '2026-06-24T19:00:00Z', venue: 'Vancouver, Canadá', homeTeam: 'Suiza', awayTeam: 'Canadá', sortOrder: 49 },
+      { id: 'gs-050', stage: 'Fase de grupos', group: 'B', dateKey: '2026-06-24', kickoffAt: '2026-06-24T19:00:00Z', venue: 'Seattle, EE. UU.', homeTeam: 'Bosnia y Herzegovina', awayTeam: 'Qatar', sortOrder: 50 },
+      { id: 'gs-051', stage: 'Fase de grupos', group: 'C', dateKey: '2026-06-24', kickoffAt: '2026-06-24T22:00:00Z', venue: 'Atlanta, EE. UU.', homeTeam: 'Marruecos', awayTeam: 'Haití', sortOrder: 51 },
+      { id: 'gs-052', stage: 'Fase de grupos', group: 'C', dateKey: '2026-06-24', kickoffAt: '2026-06-24T22:00:00Z', venue: 'Miami, EE. UU.', homeTeam: 'Escocia', awayTeam: 'Brasil', sortOrder: 52 },
+      { id: 'gs-053', stage: 'Fase de grupos', group: 'A', dateKey: '2026-06-25', kickoffAt: '2026-06-25T01:00:00Z', venue: 'Guadalajara, México', homeTeam: 'Sudáfrica', awayTeam: 'Corea del Sur', sortOrder: 53 },
+      { id: 'gs-054', stage: 'Fase de grupos', group: 'A', dateKey: '2026-06-25', kickoffAt: '2026-06-25T01:00:00Z', venue: 'Ciudad de México, México', homeTeam: 'Chequia', awayTeam: 'México', sortOrder: 54 },
+      { id: 'gs-055', stage: 'Fase de grupos', group: 'E', dateKey: '2026-06-25', kickoffAt: '2026-06-25T20:00:00Z', venue: 'Filadelfia, EE. UU.', homeTeam: 'Curazao', awayTeam: 'Costa de Marfil', sortOrder: 55 },
+      { id: 'gs-056', stage: 'Fase de grupos', group: 'E', dateKey: '2026-06-25', kickoffAt: '2026-06-25T20:00:00Z', venue: 'Nueva Jersey, EE. UU.', homeTeam: 'Ecuador', awayTeam: 'Alemania', sortOrder: 56 },
+      { id: 'gs-057', stage: 'Fase de grupos', group: 'F', dateKey: '2026-06-26', kickoffAt: '2026-06-25T23:00:00Z', venue: 'Kansas City, EE. UU.', homeTeam: 'Túnez', awayTeam: 'Países Bajos', sortOrder: 57 },
+      { id: 'gs-058', stage: 'Fase de grupos', group: 'F', dateKey: '2026-06-26', kickoffAt: '2026-06-25T23:00:00Z', venue: 'Arlington, EE. UU.', homeTeam: 'Japón', awayTeam: 'Suecia', sortOrder: 58 },
+      { id: 'gs-059', stage: 'Fase de grupos', group: 'D', dateKey: '2026-06-26', kickoffAt: '2026-06-26T02:00:00Z', venue: 'Los Ángeles, EE. UU.', homeTeam: 'Turquía', awayTeam: 'Estados Unidos', sortOrder: 59 },
+      { id: 'gs-060', stage: 'Fase de grupos', group: 'D', dateKey: '2026-06-26', kickoffAt: '2026-06-26T02:00:00Z', venue: 'Santa Clara, EE. UU.', homeTeam: 'Paraguay', awayTeam: 'Australia', sortOrder: 60 },
+      { id: 'gs-061', stage: 'Fase de grupos', group: 'I', dateKey: '2026-06-26', kickoffAt: '2026-06-26T19:00:00Z', venue: 'Foxborough, EE. UU.', homeTeam: 'Noruega', awayTeam: 'Francia', sortOrder: 61 },
+      { id: 'gs-062', stage: 'Fase de grupos', group: 'I', dateKey: '2026-06-26', kickoffAt: '2026-06-26T19:00:00Z', venue: 'Toronto, Canadá', homeTeam: 'Senegal', awayTeam: 'Irak', sortOrder: 62 },
+      { id: 'gs-063', stage: 'Fase de grupos', group: 'H', dateKey: '2026-06-27', kickoffAt: '2026-06-27T00:00:00Z', venue: 'Houston, EE. UU.', homeTeam: 'Cabo Verde', awayTeam: 'Arabia Saudita', sortOrder: 63 },
+      { id: 'gs-064', stage: 'Fase de grupos', group: 'H', dateKey: '2026-06-27', kickoffAt: '2026-06-27T00:00:00Z', venue: 'Guadalajara, México', homeTeam: 'Uruguay', awayTeam: 'España', sortOrder: 64 },
+      { id: 'gs-065', stage: 'Fase de grupos', group: 'G', dateKey: '2026-06-27', kickoffAt: '2026-06-27T03:00:00Z', venue: 'Vancouver, Canadá', homeTeam: 'Nueva Zelanda', awayTeam: 'Bélgica', sortOrder: 65 },
+      { id: 'gs-066', stage: 'Fase de grupos', group: 'G', dateKey: '2026-06-27', kickoffAt: '2026-06-27T03:00:00Z', venue: 'Seattle, EE. UU.', homeTeam: 'Egipto', awayTeam: 'Irán', sortOrder: 66 },
+      { id: 'gs-067', stage: 'Fase de grupos', group: 'L', dateKey: '2026-06-27', kickoffAt: '2026-06-27T21:00:00Z', venue: 'Nueva Jersey, EE. UU.', homeTeam: 'Panamá', awayTeam: 'Inglaterra', sortOrder: 67 },
+      { id: 'gs-068', stage: 'Fase de grupos', group: 'L', dateKey: '2026-06-27', kickoffAt: '2026-06-27T21:00:00Z', venue: 'Filadelfia, EE. UU.', homeTeam: 'Croacia', awayTeam: 'Ghana', sortOrder: 68 },
+      { id: 'gs-069', stage: 'Fase de grupos', group: 'K', dateKey: '2026-06-28', kickoffAt: '2026-06-27T23:30:00Z', venue: 'Miami, EE. UU.', homeTeam: 'Colombia', awayTeam: 'Portugal', sortOrder: 69 },
+      { id: 'gs-070', stage: 'Fase de grupos', group: 'K', dateKey: '2026-06-28', kickoffAt: '2026-06-27T23:30:00Z', venue: 'Atlanta, EE. UU.', homeTeam: 'RD Congo', awayTeam: 'Uzbekistán', sortOrder: 70 },
+      { id: 'gs-071', stage: 'Fase de grupos', group: 'J', dateKey: '2026-06-28', kickoffAt: '2026-06-28T02:00:00Z', venue: 'Kansas City, EE. UU.', homeTeam: 'Argelia', awayTeam: 'Austria', sortOrder: 71 },
+      { id: 'gs-072', stage: 'Fase de grupos', group: 'J', dateKey: '2026-06-28', kickoffAt: '2026-06-28T02:00:00Z', venue: 'Arlington, EE. UU.', homeTeam: 'Jordania', awayTeam: 'Argentina', sortOrder: 72 }
+    ];
+
+    const els = {
+      setupNotice: document.getElementById('setupNotice'),
+      googleLoginBtn: document.getElementById('googleLoginBtn'),
+      signedInBox: document.getElementById('signedInBox'),
+      signedOutHint: document.getElementById('signedOutHint'),
+      userAvatar: document.getElementById('userAvatar'),
+      authUserName: document.getElementById('authUserName'),
+      authUserEmail: document.getElementById('authUserEmail'),
+      logoutBtn: document.getElementById('logoutBtn'),
+      refreshBtn: document.getElementById('refreshBtn'),
+      currentUserLabel: document.getElementById('currentUserLabel'),
+      nextMatchLabel: document.getElementById('nextMatchLabel'),
+      userPointsLabel: document.getElementById('userPointsLabel'),
+      viewTabs: document.getElementById('viewTabs'),
+      mobileNav: document.getElementById('mobileNav'),
+      tabs: document.getElementById('tabs'),
+      summaryGrid: document.getElementById('summaryGrid'),
+      podiumWrap: document.getElementById('podiumWrap'),
+      matchesTitle: document.getElementById('matchesTitle'),
+      matchCountLabel: document.getElementById('matchCountLabel'),
+      matchList: document.getElementById('matchList'),
+      standingsWrap: document.getElementById('standingsWrap'),
+      nextRoundWrap: document.getElementById('nextRoundWrap'),
+      argentinaMatchesWrap: document.getElementById('argentinaMatchesWrap'),
+      fullFixtureWrap: document.getElementById('fullFixtureWrap'),
+      knockoutBracketWrap: document.getElementById('knockoutBracketWrap'),
+      adminDisabledNote: document.getElementById('adminDisabledNote'),
+      adminPanel: document.getElementById('adminPanel'),
+      seedFixtureBtn: document.getElementById('seedFixtureBtn'),
+      adminMatchSelect: document.getElementById('adminMatchSelect'),
+      adminHomeScore: document.getElementById('adminHomeScore'),
+      adminAwayScore: document.getElementById('adminAwayScore'),
+      saveResultBtn: document.getElementById('saveResultBtn'),
+      clearResultBtn: document.getElementById('clearResultBtn')
+    };
+
+    const state = {
+      previewMode: true,
+      firebaseReady: false,
+      auth: null,
+      db: null,
+      currentUser: null,
+      matches: [],
+      users: [],
+      bets: [],
+      selectedDateKey: null,
+      currentView: 'resumen',
+      previewStore: loadPreviewStore(),
+      unsubscribers: []
+    };
+
+    init();
+
+    function init() {
+      bindEvents();
+      if (isFirebaseAvailable() && isFirebaseConfigured()) {
+        initFirebaseMode();
+      } else {
+        initPreviewMode();
+      }
+      window.setInterval(() => {
+        renderHeader();
+        renderMatches();
+        renderNextRound();
+        renderSummary();
+      }, 30000);
+      runSelfTests();
+    }
+
+    function bindEvents() {
+      els.googleLoginBtn.addEventListener('click', loginWithGoogle);
+      els.logoutBtn.addEventListener('click', logout);
+      els.refreshBtn.addEventListener('click', renderAll);
+      els.seedFixtureBtn.addEventListener('click', seedFixtureIfAdmin);
+      els.adminMatchSelect.addEventListener('change', fillAdminInputsFromSelection);
+      els.saveResultBtn.addEventListener('click', saveResultIfAdmin);
+      els.clearResultBtn.addEventListener('click', clearResultIfAdmin);
+
+      document.querySelectorAll('[data-view]').forEach((btn) => {
+        btn.addEventListener('click', () => setView(btn.dataset.view));
+      });
+    }
+
+    function setView(view) {
+      if (view === 'admin' && !isAdmin()) {
+        view = 'resumen';
+      }
+      state.currentView = view;
+      document.querySelectorAll('.view-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.id === `view-${view}`);
+      });
+      document.querySelectorAll('.view-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.view === view);
+      });
+      els.mobileNav.querySelectorAll('button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === view);
+      });
+    }
+
+    function initPreviewMode() {
+      state.previewMode = true;
+      state.firebaseReady = false;
+      state.matches = applyPreviewResults(cloneFixture(OFFICIAL_FIXTURE), state.previewStore.matchResults || {});
+      state.users = state.previewStore.users;
+      state.bets = state.previewStore.bets;
+      state.currentUser = state.previewStore.currentUser;
+      state.selectedDateKey = getInitialDateKey();
+
+      els.setupNotice.classList.remove('hidden');
+      els.setupNotice.innerHTML = '<strong>Modo demo local.</strong> Ya puedes recorrer las secciones Resumen, Apuestas, Clasificación y Fixture. Para activar login real con Google y backend compartido, completa <code>FIREBASE_CONFIG</code> y habilita Google en Firebase Authentication.';
+      renderAll();
+    }
+
+    function initFirebaseMode() {
+      try {
+        firebase.initializeApp(FIREBASE_CONFIG);
+        state.auth = firebase.auth();
+        state.db = firebase.firestore();
+        state.previewMode = false;
+        state.firebaseReady = true;
+
+        subscribeToCollections();
+        state.auth.onAuthStateChanged(async (user) => {
+          state.currentUser = user;
+          if (user) {
+            await upsertCurrentUser(user);
+          }
+          renderAll();
+        });
+      } catch (error) {
+        console.error(error);
+        els.setupNotice.classList.remove('hidden');
+        els.setupNotice.innerHTML = '<strong>No se pudo inicializar Firebase.</strong> Revisa <code>FIREBASE_CONFIG</code> o los dominios autorizados.';
+        initPreviewMode();
+      }
+    }
+
+    function subscribeToCollections() {
+      clearSubscriptions();
+      if (!state.db) return;
+
+      state.unsubscribers.push(
+        state.db.collection('matches').orderBy('sortOrder', 'asc').onSnapshot((snapshot) => {
+          state.matches = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          if (!state.selectedDateKey) state.selectedDateKey = getInitialDateKey();
+          renderAll();
+        })
+      );
+
+      state.unsubscribers.push(
+        state.db.collection('users').onSnapshot((snapshot) => {
+          state.users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          renderAll();
+        })
+      );
+
+      state.unsubscribers.push(
+        state.db.collection('bets').onSnapshot((snapshot) => {
+          state.bets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          renderAll();
+        })
+      );
+    }
+
+    function clearSubscriptions() {
+      state.unsubscribers.forEach((unsubscribe) => {
+        try { unsubscribe(); } catch (e) {}
+      });
+      state.unsubscribers = [];
+    }
+
+    async function upsertCurrentUser(user) {
+      if (!state.db || !user) return;
+      await state.db.collection('users').doc(user.uid).set({
+        uid: user.uid,
+        displayName: user.displayName || user.email?.split('@')[0] || 'Usuario',
+        email: user.email || '',
+        photoURL: user.photoURL || '',
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }
+
+    async function loginWithGoogle() {
+      if (state.previewMode) {
+        alert('El login real con Google está preparado en el código. Para activarlo debes completar FIREBASE_CONFIG y habilitar Google en Firebase Authentication.');
+        return;
+      }
+      try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        if (window.innerWidth < 720) {
+          await state.auth.signInWithRedirect(provider);
+        } else {
+          await state.auth.signInWithPopup(provider);
+        }
+      } catch (error) {
+        console.error(error);
+        alert('No se pudo iniciar sesión con Google.');
+      }
+    }
+
+    async function logout() {
+      if (state.previewMode) {
+        alert('Estás en modo demo local. El cierre de sesión real funciona cuando activas Firebase.');
+        return;
+      }
+      if (!state.auth) return;
+      await state.auth.signOut();
+    }
+
+    async function seedFixtureIfAdmin() {
+      if (!isAdmin() || !state.db) return;
+      const batch = state.db.batch();
+      OFFICIAL_FIXTURE.forEach((match) => {
+        batch.set(state.db.collection('matches').doc(match.id), {
+          ...match,
+          kickoffAtMs: match.kickoffAtMs || Date.parse(match.kickoffAt),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      });
+      await batch.commit();
+      alert('Fixture oficial de la fase de grupos 2026 sembrado en Firestore.');
+    }
+
+    async function saveResultIfAdmin() {
+      if (!isAdmin()) return;
+      const matchId = els.adminMatchSelect.value;
+      const home = parseScore(els.adminHomeScore.value);
+      const away = parseScore(els.adminAwayScore.value);
+      if (!matchId || home === null || away === null) {
+        alert('Introduce ambos goles.');
+        return;
+      }
+
+      if (state.previewMode) {
+        const match = state.matches.find(item => item.id === matchId);
+        if (!match) return;
+        match.resultHome = home;
+        match.resultAway = away;
+        persistPreviewStore();
+        renderAll();
+        return;
+      }
+
+      await state.db.collection('matches').doc(matchId).set({
+        resultHome: home,
+        resultAway: away,
+        status: 'played',
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }
+
+    async function clearResultIfAdmin() {
+      if (!isAdmin()) return;
+      const matchId = els.adminMatchSelect.value;
+      if (!matchId) return;
+
+      if (state.previewMode) {
+        const match = state.matches.find(item => item.id === matchId);
+        if (!match) return;
+        match.resultHome = null;
+        match.resultAway = null;
+        persistPreviewStore();
+        renderAll();
+        return;
+      }
+
+      await state.db.collection('matches').doc(matchId).set({
+        resultHome: null,
+        resultAway: null,
+        status: 'scheduled',
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }
+
+    async function saveBet(matchId, homeValue, awayValue) {
+      const home = parseScore(homeValue);
+      const away = parseScore(awayValue);
+      if (!state.currentUser) {
+        alert('Debes iniciar sesión con Google.');
+        return;
+      }
+      if (home === null || away === null) {
+        alert('Introduce ambos goles con valores válidos.');
+        return;
+      }
+
+      const match = state.matches.find(item => item.id === matchId);
+      if (!match) return;
+      if (isMatchStarted(match.kickoffAt)) {
+        alert('Este partido ya empezó y el pronóstico está bloqueado.');
+        return;
+      }
+
+      if (state.previewMode) {
+        const betId = `${state.currentUser.uid}_${matchId}`;
+        const existing = state.previewStore.bets.find(bet => bet.id === betId);
+        if (existing) {
+          existing.home = home;
+          existing.away = away;
+        } else {
+          state.previewStore.bets.push({ id: betId, uid: state.currentUser.uid, matchId, home, away });
+        }
+        state.bets = state.previewStore.bets;
+        persistPreviewStore();
+        renderAll();
+        return;
+      }
+
+      await state.db.collection('bets').doc(`${state.currentUser.uid}_${matchId}`).set({
+        uid: state.currentUser.uid,
+        matchId,
+        home,
+        away,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }
+
+    function renderAll() {
+      if (!state.selectedDateKey) state.selectedDateKey = getInitialDateKey();
+      renderAuthState();
+      renderHeader();
+      renderSummary();
+      renderTabs();
+      renderMatches();
+      renderStandings();
+      renderNextRound();
+      renderArgentinaMatches();
+      renderFullFixture();
+      renderKnockoutBracket();
+      renderAdmin();
+      if (!isAdmin() && state.currentView === 'admin') {
+        state.currentView = 'resumen';
+      }
+      setView(state.currentView);
+    }
+
+    function renderAuthState() {
+      const user = state.currentUser;
+      const signedIn = !!user;
+      els.signedInBox.classList.toggle('hidden', !signedIn);
+      els.signedOutHint.classList.toggle('hidden', signedIn);
+
+      if (!signedIn) {
+        els.currentUserLabel.textContent = 'Sin sesión';
+        els.userPointsLabel.textContent = '0 pts';
+        els.authUserName.textContent = 'Sin sesión';
+        els.authUserEmail.textContent = 'Entrá con Google';
+        els.userAvatar.textContent = 'J';
+        return;
+      }
+
+      const name = user.displayName || user.email?.split('@')[0] || 'Usuario';
+      const email = user.email || (state.previewMode ? 'juanpi@demo.local' : '');
+      els.currentUserLabel.textContent = name;
+      els.authUserName.textContent = name;
+      els.authUserEmail.textContent = state.previewMode ? `${email} · demo local` : email;
+      els.userAvatar.textContent = (name || 'U').trim().charAt(0).toUpperCase();
+      els.logoutBtn.disabled = state.previewMode;
+    }
+
+    function renderHeader() {
+      const nextMatch = getUpcomingMatch();
+      if (nextMatch) {
+        els.nextMatchLabel.innerHTML = `${renderMiniFlag(nextMatch.homeTeam)} ${escapeHtml(nextMatch.homeTeam)} vs ${renderMiniFlag(nextMatch.awayTeam)} ${escapeHtml(nextMatch.awayTeam)} · ${formatDateTime(nextMatch.kickoffAt)}`;
+      } else {
+        els.nextMatchLabel.textContent = 'Sin próximos partidos';
+      }
+
+      if (!state.currentUser) {
+        els.userPointsLabel.textContent = '0 pts';
+        return;
+      }
+      els.userPointsLabel.textContent = `${calculateUserPoints(state.currentUser.uid)} pts`;
+    }
+
+    function renderSummary() {
+      const currentUid = state.currentUser?.uid || null;
+      const myBets = currentUid ? state.bets.filter(bet => bet.uid === currentUid) : [];
+      const upcomingCount = state.matches.filter(match => !isMatchStarted(match.kickoffAt)).length;
+      const resolvedCount = state.matches.filter(match => Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway)).length;
+      const openMyBets = myBets.filter(bet => {
+        const match = state.matches.find(item => item.id === bet.matchId);
+        return match && !isMatchStarted(match.kickoffAt);
+      }).length;
+      const myPoints = currentUid ? calculateUserPoints(currentUid) : 0;
+
+      els.summaryGrid.innerHTML = `
+        <div class="summary-card">
+          <div class="label">⭐ Mis puntos</div>
+          <div class="value">${myPoints}</div>
+          <div class="small">Puntaje acumulado</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">📝 Mis apuestas abiertas</div>
+          <div class="value">${openMyBets}</div>
+          <div class="small">Todavía editables</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">📅 Partidos por jugar</div>
+          <div class="value">${upcomingCount}</div>
+          <div class="small">Aún sin empezar</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">🏁 Resultados cargados</div>
+          <div class="value">${resolvedCount}</div>
+          <div class="small">Listos para puntuar</div>
+        </div>
+      `;
+
+      const ranking = buildRanking().slice(0, 3);
+      if (!ranking.length) {
+        els.podiumWrap.innerHTML = '<div class="empty">Todavía no hay suficiente actividad para armar el podio.</div>';
+      } else {
+        els.podiumWrap.innerHTML = ranking.map((row, index) => `
+          <div class="fixture-row">
+            <div>${['🥇','🥈','🥉'][index] || '🏅'} ${escapeHtml(row.name)}</div>
+            <div><strong>${row.points} pts</strong></div>
+          </div>
+        `).join('');
+      }
+    }
+
+    function renderTabs() {
+      const dateKeys = [...new Set(state.matches.map(match => match.dateKey))].sort();
+      if (!dateKeys.length) {
+        els.tabs.innerHTML = '';
+        return;
+      }
+      if (!dateKeys.includes(state.selectedDateKey)) {
+        state.selectedDateKey = dateKeys[0];
+      }
+
+      els.tabs.innerHTML = dateKeys.map(dateKey => `
+        <button class="tab ${dateKey === state.selectedDateKey ? 'active' : ''}" data-date-key="${dateKey}">
+          📍 ${formatDateChip(dateKey)}
+        </button>
+      `).join('');
+
+      els.tabs.querySelectorAll('.tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          state.selectedDateKey = tab.dataset.dateKey;
+          renderTabs();
+          renderMatches();
+        });
+      });
+    }
+
+    function renderMatches() {
+      const matches = state.matches.filter(match => match.dateKey === state.selectedDateKey);
+      els.matchesTitle.textContent = `🎯 Apuestas · ${formatDateChip(state.selectedDateKey)}`;
+      els.matchCountLabel.textContent = matches.length ? `${matches.length} partidos` : 'Sin partidos';
+
+      if (!matches.length) {
+        els.matchList.innerHTML = '<div class="empty">No hay partidos cargados para esta fecha.</div>';
+        return;
+      }
+
+      els.matchList.innerHTML = matches.map(match => renderMatchCard(match)).join('');
+
+      matches.forEach((match) => {
+        const homeInput = document.getElementById(`bet-home-${match.id}`);
+        const awayInput = document.getElementById(`bet-away-${match.id}`);
+        const saveBtn = document.getElementById(`save-bet-${match.id}`);
+        if (!homeInput || !awayInput || !saveBtn) return;
+        saveBtn.addEventListener('click', () => saveBet(match.id, homeInput.value, awayInput.value));
+      });
+    }
+
+    function renderMatchCard(match) {
+      const bet = getCurrentUserBet(match.id);
+      const hasResult = Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway);
+      const locked = isMatchStarted(match.kickoffAt);
+      const points = hasResult && bet ? calculatePointsForBet(bet, match) : null;
+      const statusBadge = hasResult
+        ? `<span class="tag good">🏁 Resultado real: ${match.resultHome}-${match.resultAway}</span>`
+        : `<span class="tag ${locked ? 'warn' : 'accent'}">${locked ? '⏳ Partido iniciado' : '📝 Pronóstico abierto'}</span>`;
+      const lockBadge = locked
+        ? `<span class="tag warn">🔒 Cerró ${formatDateTime(match.kickoffAt)}</span>`
+        : `<span class="tag accent">🕒 Apuesta hasta ${formatDateTime(match.kickoffAt)}</span>`;
+      const pointsBadge = hasResult && !bet
+        ? '<span class="tag bad">➖ Sin apuesta: 0 puntos</span>'
+        : points === null
+          ? '<span class="tag">⭐ Pendiente</span>'
+          : `<span class="tag ${points >= 2 ? 'good' : 'warn'}">⭐ ${points} ${points === 1 ? 'punto' : 'puntos'}</span>`;
+
+      return `
+        <article class="match-card">
+          <div class="match-header">
+            <span>Grupo ${escapeHtml(match.group)} · ${formatDateTime(match.kickoffAt)}</span>
+            <span>${escapeHtml(match.venue)}</span>
+          </div>
+
+          <div class="match-body">
+            <div class="team">
+              ${renderFlag(match.homeTeam)}
+              <div>
+                <div class="team-name">${escapeHtml(match.homeTeam)}</div>
+                <div class="team-meta">Local</div>
+              </div>
+            </div>
+
+            <div class="score-box">
+              <input id="bet-home-${match.id}" type="number" min="0" value="${bet ? bet.home : ''}" ${!state.currentUser || locked ? 'disabled' : ''} />
+              <span class="score-sep">-</span>
+              <input id="bet-away-${match.id}" type="number" min="0" value="${bet ? bet.away : ''}" ${!state.currentUser || locked ? 'disabled' : ''} />
+            </div>
+
+            <div class="team right">
+              <div>
+                <div class="team-name">${escapeHtml(match.awayTeam)}</div>
+                <div class="team-meta">Visitante</div>
+              </div>
+              ${renderFlag(match.awayTeam)}
+            </div>
+          </div>
+
+          <div class="deadline-row">
+            ${lockBadge}
+            ${statusBadge}
+            ${pointsBadge}
+          </div>
+
+          <div class="match-footer">
+            <div class="small">${bet ? `Tu apuesta: ${bet.home}-${bet.away}` : 'Todavía no apostaste este partido.'}</div>
+            <button id="save-bet-${match.id}" class="${locked || !state.currentUser ? 'btn-secondary' : 'btn-primary'}" ${locked || !state.currentUser ? 'disabled' : ''}>Guardar pronóstico</button>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderStandings() {
+      const rows = buildRanking();
+      if (!rows.length) {
+        els.standingsWrap.innerHTML = '<div class="empty">Todavía no hay usuarios. Inicien sesión y arranca la competencia familiar.</div>';
+        return;
+      }
+
+      const currentUid = state.currentUser?.uid || null;
+
+      els.standingsWrap.innerHTML = `
+        <table class="standings-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Usuario</th>
+              <th>Puntos</th>
+              <th>Exactos</th>
+              <th>Aciertos</th>
+              <th>Pronósticos</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((row, index) => `
+              <tr class="${currentUid && currentUid === row.id ? 'highlight' : ''}">
+                <td>${index + 1}</td>
+                <td>${escapeHtml(row.name)}</td>
+                <td><strong>${row.points}</strong></td>
+                <td>${row.exact}</td>
+                <td>${row.outcomes}</td>
+                <td>${row.bets}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderNextRound() {
+      const nextDateKey = getNextUpcomingDateKey();
+      if (!nextDateKey) {
+        els.nextRoundWrap.innerHTML = '<div class="empty">No hay próximas fechas pendientes.</div>';
+        return;
+      }
+
+      const matches = state.matches.filter(match => match.dateKey === nextDateKey);
+      els.nextRoundWrap.innerHTML = `
+        <div class="tag accent">📍 ${formatDateChip(nextDateKey)}</div>
+        ${matches.map(match => `
+          <div class="fixture-mini">
+            <div class="inline-flag-pair">${renderMiniFlag(match.homeTeam)} ${escapeHtml(match.homeTeam)} vs ${renderMiniFlag(match.awayTeam)} ${escapeHtml(match.awayTeam)}</div>
+            <div class="small">${formatTime(match.kickoffAt)}</div>
+          </div>
+        `).join('')}
+      `;
+    }
+
+    function renderArgentinaMatches() {
+      const argentinaMatches = [...state.matches]
+        .filter(match => match.homeTeam === 'Argentina' || match.awayTeam === 'Argentina')
+        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
+      if (!argentinaMatches.length) {
+        els.argentinaMatchesWrap.innerHTML = '<div class="empty">Todavía no hay partidos de Argentina cargados.</div>';
+        return;
+      }
+
+      els.argentinaMatchesWrap.innerHTML = argentinaMatches.map(match => {
+        const hasResult = Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway);
+        const resultLabel = hasResult
+          ? `<span class="tag good">Resultado: ${match.resultHome}-${match.resultAway}</span>`
+          : `<span class="tag accent">${isMatchStarted(match.kickoffAt) ? 'En juego o cerrado' : 'Próximo partido'}</span>`;
+        return `
+          <div class="fixture-row">
+            <div>
+              <div class="inline-flag-pair">${renderMiniFlag(match.homeTeam)} ${escapeHtml(match.homeTeam)} vs ${renderMiniFlag(match.awayTeam)} ${escapeHtml(match.awayTeam)}</div>
+              <div class="small">Grupo ${escapeHtml(match.group)} · ${formatDateTime(match.kickoffAt)} · ${escapeHtml(match.venue)}</div>
+            </div>
+            <div>${resultLabel}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderFullFixture() {
+      const byDate = [...new Set(state.matches.map(match => match.dateKey))].sort();
+      if (!byDate.length) {
+        els.fullFixtureWrap.innerHTML = '<div class="empty">No hay fixture cargado.</div>';
+        return;
+      }
+
+      els.fullFixtureWrap.innerHTML = byDate.map(dateKey => {
+        const matches = state.matches.filter(match => match.dateKey === dateKey);
+        return `
+          <div class="fixture-day">${formatDateChip(dateKey)}</div>
+          ${matches.map(match => `
+            <div class="fixture-row">
+              <div class="inline-flag-pair">${renderMiniFlag(match.homeTeam)} ${escapeHtml(match.homeTeam)} vs ${renderMiniFlag(match.awayTeam)} ${escapeHtml(match.awayTeam)}</div>
+              <div class="small">${formatTime(match.kickoffAt)}</div>
+            </div>
+          `).join('')}
+        `;
+      }).join('');
+    }
+
+    function renderKnockoutBracket() {
+      els.knockoutBracketWrap.innerHTML = `
+        <div class="bracket-wrap">
+          <div class="bracket-grid">
+            ${KNOCKOUT_BRACKET.map((round) => `
+              <div class="bracket-column">
+                <div class="bracket-round-title">
+                  <span>${round.round}</span>
+                  <small>${round.window}</small>
+                </div>
+                ${round.matches.map((match) => `
+                  <div class="bracket-match ${match.final ? 'final' : ''}">
+                    <div class="bracket-match-header">
+                      <span>${match.id}</span>
+                      <span>${round.round}</span>
+                    </div>
+                    <div class="bracket-team">${escapeHtml(match.home)}</div>
+                    <div class="bracket-team">${escapeHtml(match.away)}</div>
+                  </div>
+                `).join('')}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <div class="bracket-note">
+          El cuadro muestra el camino oficial desde la fase de grupos hasta la final. Los equipos reales se completarán cuando se definan los 1º, 2º y los ocho mejores terceros de grupo.
+        </div>
+      `;
+    }
+
+    function renderAdmin() {
+      const admin = isAdmin();
+      const desktopAdminTab = document.getElementById('desktopAdminTab');
+      const mobileAdminTab = document.getElementById('mobileAdminTab');
+      const adminView = document.getElementById('view-admin');
+
+      if (desktopAdminTab) desktopAdminTab.classList.toggle('hidden', !admin);
+      if (mobileAdminTab) mobileAdminTab.classList.toggle('hidden', !admin);
+      if (adminView) adminView.classList.toggle('hidden', !admin);
+
+      els.adminDisabledNote.classList.toggle('hidden', admin);
+      els.adminPanel.classList.toggle('hidden', !admin);
+
+      const options = state.matches.map((match) => {
+        const resultLabel = Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway)
+          ? ` · ${match.resultHome}-${match.resultAway}`
+          : '';
+        return `<option value="${match.id}">${formatDateChip(match.dateKey)} · Grupo ${match.group} · ${escapeHtml(match.homeTeam)} vs ${escapeHtml(match.awayTeam)}${resultLabel}</option>`;
+      });
+      els.adminMatchSelect.innerHTML = options.length ? options.join('') : '<option value="">No hay partidos</option>';
+      fillAdminInputsFromSelection();
+    }
+
+    function fillAdminInputsFromSelection() {
+      const match = state.matches.find(item => item.id === els.adminMatchSelect.value);
+      els.adminHomeScore.value = match && Number.isInteger(match.resultHome) ? match.resultHome : '';
+      els.adminAwayScore.value = match && Number.isInteger(match.resultAway) ? match.resultAway : '';
+    }
+
+    function buildRanking() {
+      return state.users
+        .map((user) => {
+          const uid = user.uid || user.id;
+          return {
+            id: uid,
+            name: user.displayName || user.email || 'Usuario',
+            points: calculateUserPoints(uid),
+            exact: countExactHits(uid),
+            outcomes: countOutcomeHits(uid),
+            bets: countUserBets(uid)
+          };
+        })
+        .sort((a, b) => b.points - a.points || b.exact - a.exact || b.outcomes - a.outcomes || a.name.localeCompare(b.name, 'es'));
+    }
+
+    function getCurrentUserBet(matchId) {
+      if (!state.currentUser) return null;
+      return state.bets.find(bet => bet.uid === state.currentUser.uid && bet.matchId === matchId) || null;
+    }
+
+    function calculateUserPoints(uid) {
+      return state.bets
+        .filter(bet => bet.uid === uid)
+        .reduce((total, bet) => {
+          const match = state.matches.find(item => item.id === bet.matchId);
+          if (!match || !Number.isInteger(match.resultHome) || !Number.isInteger(match.resultAway)) return total;
+          return total + calculatePointsForBet(bet, match);
+        }, 0);
+    }
+
+    function countExactHits(uid) {
+      return state.bets
+        .filter(bet => bet.uid === uid)
+        .reduce((count, bet) => {
+          const match = state.matches.find(item => item.id === bet.matchId);
+          if (!match || !Number.isInteger(match.resultHome) || !Number.isInteger(match.resultAway)) return count;
+          return bet.home === match.resultHome && bet.away === match.resultAway ? count + 1 : count;
+        }, 0);
+    }
+
+    function countOutcomeHits(uid) {
+      return state.bets
+        .filter(bet => bet.uid === uid)
+        .reduce((count, bet) => {
+          const match = state.matches.find(item => item.id === bet.matchId);
+          if (!match || !Number.isInteger(match.resultHome) || !Number.isInteger(match.resultAway)) return count;
+          return getOutcome(bet.home, bet.away) === getOutcome(match.resultHome, match.resultAway) ? count + 1 : count;
+        }, 0);
+    }
+
+    function countUserBets(uid) {
+      return state.bets.filter(bet => bet.uid === uid).length;
+    }
+
+    function calculatePointsForBet(bet, match) {
+      if (bet.home === match.resultHome && bet.away === match.resultAway) return 4;
+      if (getOutcome(bet.home, bet.away) === getOutcome(match.resultHome, match.resultAway)) return 2;
+      return 1;
+    }
+
+    function getOutcome(home, away) {
+      if (home > away) return 'home';
+      if (home < away) return 'away';
+      return 'draw';
+    }
+
+    function getUpcomingMatch() {
+      const now = Date.now();
+      return [...state.matches]
+        .filter(match => getDateMs(match.kickoffAt) > now)
+        .sort((a, b) => getDateMs(a.kickoffAt) - getDateMs(b.kickoffAt))[0] || null;
+    }
+
+    function getNextUpcomingDateKey() {
+      const next = getUpcomingMatch();
+      return next?.dateKey || null;
+    }
+
+    function getInitialDateKey() {
+      return [...new Set(state.matches.map(match => match.dateKey))].sort()[0] || '2026-06-11';
+    }
+
+    function isMatchStarted(kickoffAt) {
+      const time = getDateMs(kickoffAt);
+      return time !== null ? time <= Date.now() : false;
+    }
+
+    function isAdmin() {
+      const email = state.currentUser?.email?.toLowerCase() || '';
+      if (state.previewMode) return true;
+      return ADMIN_EMAILS.map(item => item.toLowerCase()).includes(email);
+    }
+
+    function isFirebaseAvailable() {
+      return typeof window.firebase !== 'undefined';
+    }
+
+    function isFirebaseConfigured() {
+      return FIREBASE_CONFIG.apiKey && !String(FIREBASE_CONFIG.apiKey).includes('PON_AQUI');
+    }
+
+    function parseScore(value) {
+      if (value === '' || value === null || value === undefined) return null;
+      const num = Number(value);
+      if (!Number.isInteger(num) || num < 0) return null;
+      return num;
+    }
+
+    function safeDate(value) {
+      if (typeof value !== 'string' && typeof value !== 'number' && !(value instanceof Date)) return null;
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    function getDateMs(value) {
+      const date = safeDate(value);
+      return date ? date.getTime() : null;
+    }
+
+    function formatDateTime(value) {
+      const date = safeDate(value);
+      if (!date) return 'Fecha inválida';
+      return new Intl.DateTimeFormat('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date);
+    }
+
+    function formatTime(value) {
+      const date = safeDate(value);
+      if (!date) return '--:--';
+      return new Intl.DateTimeFormat('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date);
+    }
+
+    function formatDateChip(dateKey) {
+      const date = safeDate(`${dateKey}T12:00:00`);
+      if (!date) return dateKey;
+      return new Intl.DateTimeFormat('es-ES', {
+        weekday: 'short',
+        day: '2-digit',
+        month: 'short'
+      }).format(date);
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function cloneFixture(fixture) {
+      return fixture.map(match => ({ ...match, resultHome: match.resultHome ?? null, resultAway: match.resultAway ?? null }));
+    }
+
+    function loadPreviewStore() {
+      const fallback = {
+        currentUser: { uid: 'preview-jp', displayName: 'Juan Pablo', email: 'juanpi@demo.local' },
+        users: [
+          { uid: 'preview-jp', displayName: 'Juan Pablo', email: 'juanpi@demo.local' },
+          { uid: 'preview-flor', displayName: 'Flor', email: 'flor@demo.local' },
+          { uid: 'preview-dante', displayName: 'Dante', email: 'dante@demo.local' }
+        ],
+        bets: [],
+        matchResults: {}
+      };
+
+      try {
+        const raw = localStorage.getItem(PREVIEW_STORAGE_KEY);
+        if (!raw) return fallback;
+        const parsed = JSON.parse(raw);
+        return {
+          currentUser: parsed.currentUser || fallback.currentUser,
+          users: Array.isArray(parsed.users) && parsed.users.length ? parsed.users : fallback.users,
+          bets: Array.isArray(parsed.bets) ? parsed.bets : [],
+          matchResults: parsed.matchResults && typeof parsed.matchResults === 'object' ? parsed.matchResults : {}
+        };
+      } catch (error) {
+        console.warn('No se pudo cargar el modo demo.', error);
+        return fallback;
+      }
+    }
+
+    function persistPreviewStore() {
+      state.previewStore.matchResults = Object.fromEntries(
+        state.matches
+          .filter(match => Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway))
+          .map(match => [match.id, { resultHome: match.resultHome, resultAway: match.resultAway }])
+      );
+      localStorage.setItem(PREVIEW_STORAGE_KEY, JSON.stringify(state.previewStore));
+    }
+
+    function applyPreviewResults(matches, matchResults) {
+      return matches.map(match => {
+        const saved = matchResults?.[match.id];
+        return {
+          ...match,
+          resultHome: Number.isInteger(saved?.resultHome) ? saved.resultHome : null,
+          resultAway: Number.isInteger(saved?.resultAway) ? saved.resultAway : null
+        };
+      });
+    }
+
+    function getFlagCode(teamName) {
+      return FLAG_CODE_BY_TEAM[teamName] || null;
+    }
+
+    function getCustomFlagSvg(teamName) {
+      if (teamName === 'Inglaterra') {
+        return `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 45'><rect width='60' height='45' fill='white'/><rect x='24' width='12' height='45' fill='%23c8102e'/><rect y='16.5' width='60' height='12' fill='%23c8102e'/></svg>`)}`;
+      }
+      if (teamName === 'Escocia') {
+        return `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 45'><rect width='60' height='45' fill='%230052b4'/><path d='M0 0 L8 0 L60 37 L60 45 L52 45 L0 8 Z' fill='white'/><path d='M52 0 L60 0 L60 8 L8 45 L0 45 L0 37 Z' fill='white'/></svg>`)}`;
+      }
+      return null;
+    }
+
+    function getFlagSrc(teamName) {
+      const custom = getCustomFlagSvg(teamName);
+      if (custom) return custom;
+      const code = getFlagCode(teamName);
+      return code ? `https://flagcdn.com/w80/${code}.png` : null;
+    }
+
+    function renderFlag(teamName) {
+      const src = getFlagSrc(teamName);
+      const fallback = escapeHtml(teamName.slice(0, 1).toUpperCase());
+      return `<div class="flag">${src ? `<img class="flag-img" src="${src}" alt="Bandera de ${escapeHtml(teamName)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';" />` : ''}<span class="flag-fallback" style="display:${src ? 'none' : 'grid'}">${fallback}</span></div>`;
+    }
+
+    function renderMiniFlag(teamName) {
+      const src = getFlagSrc(teamName);
+      const fallback = escapeHtml(teamName.slice(0, 1).toUpperCase());
+      return `<span class="mini-flag">${src ? `<img src="${src}" alt="Bandera de ${escapeHtml(teamName)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';" />` : ''}<span class="flag-fallback" style="display:${src ? 'none' : 'grid'}">${fallback}</span></span>`;
+    }
+
+    function runSelfTests() {
+      const tests = [
+        { name: 'safeDate rechaza fechas inválidas', run: () => safeDate('fecha-rota') === null },
+        { name: 'parseScore rechaza negativos', run: () => parseScore(-1) === null },
+        { name: 'puntaje exacto suma 4', run: () => calculatePointsForBet({ home: 2, away: 1 }, { resultHome: 2, resultAway: 1 }) === 4 },
+        { name: 'puntaje por signo suma 2', run: () => calculatePointsForBet({ home: 1, away: 0 }, { resultHome: 3, resultAway: 0 }) === 2 },
+        { name: 'puntaje por apostar y fallar suma 1', run: () => calculatePointsForBet({ home: 0, away: 1 }, { resultHome: 3, resultAway: 0 }) === 1 },
+        { name: 'fixture tiene códigos de bandera', run: () => OFFICIAL_FIXTURE.every(match => FLAG_CODE_BY_TEAM[match.homeTeam] && FLAG_CODE_BY_TEAM[match.awayTeam]) },
+        { name: 'fixture tiene fechas válidas', run: () => OFFICIAL_FIXTURE.every(match => !!safeDate(match.kickoffAt)) },
+        { name: 'antes de iniciar permite apostar', run: () => isMatchStarted(new Date(Date.now() + 60000).toISOString()) === false },
+        { name: 'al iniciar o después bloquea apuesta', run: () => isMatchStarted(new Date(Date.now() - 60000).toISOString()) === true },
+        { name: 'cambio de vista funciona', run: () => ['resumen','apuestas','clasificacion','fixture','admin'].includes(state.currentView) },
+        { name: 'admin solo permitido a correo especial', run: () => ADMIN_EMAILS.length === 1 && ADMIN_EMAILS[0] === 'gerbijuan@gmail.com' },
+        { name: 'cuadro final tiene seis rondas', run: () => KNOCKOUT_BRACKET.length === 6 }
+      ];
+
+      const failed = tests.filter(test => {
+        try {
+          return !test.run();
+        } catch (error) {
+          console.error(`Test falló: ${test.name}`, error);
+          return true;
+        }
+      });
+
+      if (failed.length) {
+        console.error('Fallaron tests internos:', failed.map(t => t.name));
+      } else {
+        console.info('Tests internos OK:', tests.map(t => t.name));
+      }
+    }
+  </script>
+</body>
+</html>

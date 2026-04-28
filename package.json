@@ -1,0 +1,12 @@
+{
+  "name": "prode-mundialista-gmail-free",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync:results": "node ./scripts/sync-results.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.2"
+  }
+}

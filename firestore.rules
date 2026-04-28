@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && request.auth.token.email == 'gerbijuan@gmail.com';
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function kickoffMs(matchId) {
+      return get(/databases/$(database)/documents/matches/$(matchId)).data.kickoffAtMs;
+    }
+
+    function bettingOpen(matchId) {
+      return kickoffMs(matchId) is int && request.time.toMillis() < kickoffMs(matchId);
+    }
+
+    match /matches/{matchId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /ranking/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /tournament/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isOwner(uid);
+      allow delete: if false;
+    }
+
+    match /bets/{betId} {
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.matchId is string
+        && bettingOpen(request.resource.data.matchId);
+      allow update: if signedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.matchId == resource.data.matchId
+        && bettingOpen(resource.data.matchId);
+      allow delete: if false;
+    }
+  }
+}
