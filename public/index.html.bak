@@ -935,10 +935,10 @@
       <div class="auth-card hero-card">
         <div class="auth-title">
           <h2>🔐 Acceso</h2>
-          <span class="small">Google + Firebase</span>
         </div>
 
         <div id="setupNotice" class="notice hidden"></div>
+        <div id="authErrorNotice" class="notice hidden"></div>
 
         <div class="row">
           <button id="googleLoginBtn" class="btn-google">
@@ -964,10 +964,6 @@
 
         <div class="row">
           <button id="logoutBtn" class="btn-secondary">Cerrar sesión</button>
-        </div>
-
-        <div class="small">
-          Si todavía no pegaste tu configuración, la app entra en <strong>modo demo local</strong>. El login real y el backend se activan completando <code>FIREBASE_CONFIG</code> y habilitando Google en Firebase Authentication.
         </div>
       </div>
     </section>
@@ -1294,7 +1290,8 @@
       adminHomeScore: document.getElementById('adminHomeScore'),
       adminAwayScore: document.getElementById('adminAwayScore'),
       saveResultBtn: document.getElementById('saveResultBtn'),
-      clearResultBtn: document.getElementById('clearResultBtn')
+      clearResultBtn: document.getElementById('clearResultBtn'),
+      authErrorNotice: document.getElementById('authErrorNotice')
     };
 
     const state = {
@@ -1306,6 +1303,7 @@
       matches: [],
       users: [],
       bets: [],
+      ranking: [],
       selectedDateKey: null,
       currentView: 'resumen',
       previewStore: loadPreviewStore(),
@@ -1382,12 +1380,22 @@
         state.previewMode = false;
         state.firebaseReady = true;
 
+        state.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(handleFirebaseAuthError);
+        state.auth.getRedirectResult().then((result) => {
+          if (result?.user) {
+            hideAuthError();
+          }
+        }).catch(handleFirebaseAuthError);
+
         subscribeToCollections();
         state.auth.onAuthStateChanged(async (user) => {
           state.currentUser = user;
+          clearSubscriptions();
           if (user) {
             await upsertCurrentUser(user);
+            hideAuthError();
           }
+          subscribeToCollections();
           renderAll();
         });
       } catch (error) {
@@ -1418,11 +1426,29 @@
       );
 
       state.unsubscribers.push(
-        state.db.collection('bets').onSnapshot((snapshot) => {
-          state.bets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        state.db.collection('ranking').doc('current').onSnapshot((doc) => {
+          const data = doc.data();
+          state.ranking = Array.isArray(data?.rows) ? data.rows : [];
           renderAll();
+        }, (error) => {
+          console.error('Error leyendo ranking agregado', error);
         })
       );
+
+      if (state.currentUser?.uid) {
+        state.unsubscribers.push(
+          state.db.collection('bets').where('uid', '==', state.currentUser.uid).onSnapshot((snapshot) => {
+            state.bets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            hideAuthError();
+            renderAll();
+          }, (error) => {
+            console.error('Error leyendo apuestas del usuario', error);
+            showAuthError('No se pudieron leer tus pronósticos desde Firestore. Revisa las reglas o vuelve a iniciar sesión.');
+          })
+        );
+      } else {
+        state.bets = [];
+      }
     }
 
     function clearSubscriptions() {
@@ -1449,15 +1475,17 @@
         return;
       }
       try {
+        hideAuthError();
         const provider = new firebase.auth.GoogleAuthProvider();
-        if (window.innerWidth < 720) {
+        await state.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+        if (window.innerWidth < 820) {
           await state.auth.signInWithRedirect(provider);
         } else {
           await state.auth.signInWithPopup(provider);
         }
       } catch (error) {
         console.error(error);
-        alert('No se pudo iniciar sesión con Google.');
+        handleFirebaseAuthError(error);
       }
     }
 
@@ -1569,13 +1597,24 @@
         return;
       }
 
-      await state.db.collection('bets').doc(`${state.currentUser.uid}_${matchId}`).set({
-        uid: state.currentUser.uid,
-        matchId,
-        home,
-        away,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
+      try {
+        await state.db.collection('bets').doc(`${state.currentUser.uid}_${matchId}`).set({
+          uid: state.currentUser.uid,
+          matchId,
+          home,
+          away,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        hideAuthError();
+      } catch (error) {
+        console.error('Error guardando pronóstico', error);
+        const message = String(error?.message || error || 'Error desconocido');
+        if (message.includes('Missing or insufficient permissions')) {
+          showAuthError('Firestore rechazó el guardado. Lo más probable es que a ese partido le falte kickoffAtMs en la colección matches. Entra con gerbijuan@gmail.com y pulsa una vez “Sembrar fixture 2026 en Firebase”.');
+        } else {
+          showAuthError(`No se pudo guardar el pronóstico: ${escapeHtml(message)}`);
+        }
+      }
     }
 
     function renderAll() {
@@ -1602,6 +1641,7 @@
       const signedIn = !!user;
       els.signedInBox.classList.toggle('hidden', !signedIn);
       els.signedOutHint.classList.toggle('hidden', signedIn);
+      els.googleLoginBtn.classList.toggle('hidden', signedIn);
 
       if (!signedIn) {
         els.currentUserLabel.textContent = 'Sin sesión';
@@ -1633,7 +1673,10 @@
         els.userPointsLabel.textContent = '0 pts';
         return;
       }
-      els.userPointsLabel.textContent = `${calculateUserPoints(state.currentUser.uid)} pts`;
+
+      const rankingRow = getRankingRow(state.currentUser.uid);
+      const points = rankingRow ? rankingRow.points : calculateUserPoints(state.currentUser.uid);
+      els.userPointsLabel.textContent = `${points} pts`;
     }
 
     function renderSummary() {
@@ -1645,7 +1688,8 @@
         const match = state.matches.find(item => item.id === bet.matchId);
         return match && !isMatchStarted(match.kickoffAt);
       }).length;
-      const myPoints = currentUid ? calculateUserPoints(currentUid) : 0;
+      const rankingRow = currentUid ? getRankingRow(currentUid) : null;
+      const myPoints = rankingRow ? rankingRow.points : (currentUid ? calculateUserPoints(currentUid) : 0);
 
       els.summaryGrid.innerHTML = `
         <div class="summary-card">
@@ -1955,11 +1999,16 @@
     }
 
     function buildRanking() {
+      if (!state.previewMode && Array.isArray(state.ranking) && state.ranking.length) {
+        return [...state.ranking].sort((a, b) => b.points - a.points || b.exact - a.exact || b.outcomes - a.outcomes || a.name.localeCompare(b.name, 'es'));
+      }
+
       return state.users
         .map((user) => {
           const uid = user.uid || user.id;
           return {
             id: uid,
+            uid,
             name: user.displayName || user.email || 'Usuario',
             points: calculateUserPoints(uid),
             exact: countExactHits(uid),
@@ -1968,6 +2017,11 @@
           };
         })
         .sort((a, b) => b.points - a.points || b.exact - a.exact || b.outcomes - a.outcomes || a.name.localeCompare(b.name, 'es'));
+    }
+
+    function getRankingRow(uid) {
+      const ranking = buildRanking();
+      return ranking.find((row) => (row.uid || row.id) === uid) || null;
     }
 
     function getCurrentUserBet(matchId) {
@@ -2198,6 +2252,38 @@
       return `<span class="mini-flag">${src ? `<img src="${src}" alt="Bandera de ${escapeHtml(teamName)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';" />` : ''}<span class="flag-fallback" style="display:${src ? 'none' : 'grid'}">${fallback}</span></span>`;
     }
 
+    function handleFirebaseAuthError(error) {
+      const code = String(error?.code || '');
+      const host = window.location.hostname;
+      if (code === 'auth/unauthorized-domain') {
+        showAuthError(`Google Sign-In rechazó el dominio actual (${escapeHtml(host)}). Añádelo en Firebase Authentication → Settings → Authorized domains y vuelve a probar.`);
+        return;
+      }
+      if (code === 'auth/operation-not-supported-in-this-environment') {
+        showAuthError('Este navegador móvil está bloqueando el flujo de autenticación. Prueba fuera del modo incógnito o abre la app en Chrome/Safari normal.');
+        return;
+      }
+      if (code === 'auth/popup-blocked' || code === 'auth/popup-closed-by-user') {
+        showAuthError('El navegador bloqueó la ventana de acceso. En móvil se usa redirección; vuelve a tocar “Entrar con Google”.');
+        return;
+      }
+      if (code === 'auth/network-request-failed') {
+        showAuthError('Falló la conexión durante el inicio de sesión. Revisa la red móvil o Wi‑Fi y prueba de nuevo.');
+        return;
+      }
+      showAuthError(`No se pudo iniciar sesión con Google: ${escapeHtml(code || error?.message || 'error desconocido')}`);
+    }
+
+    function showAuthError(message) {
+      els.authErrorNotice.innerHTML = message;
+      els.authErrorNotice.classList.remove('hidden');
+    }
+
+    function hideAuthError() {
+      els.authErrorNotice.classList.add('hidden');
+      els.authErrorNotice.innerHTML = '';
+    }
+
     function runSelfTests() {
       const tests = [
         { name: 'safeDate rechaza fechas inválidas', run: () => safeDate('fecha-rota') === null },
@@ -2211,7 +2297,9 @@
         { name: 'al iniciar o después bloquea apuesta', run: () => isMatchStarted(new Date(Date.now() - 60000).toISOString()) === true },
         { name: 'cambio de vista funciona', run: () => ['resumen','apuestas','clasificacion','fixture','admin'].includes(state.currentView) },
         { name: 'admin solo permitido a correo especial', run: () => ADMIN_EMAILS.length === 1 && ADMIN_EMAILS[0] === 'gerbijuan@gmail.com' },
-        { name: 'cuadro final tiene seis rondas', run: () => KNOCKOUT_BRACKET.length === 6 }
+        { name: 'cuadro final tiene seis rondas', run: () => KNOCKOUT_BRACKET.length === 6 },
+        { name: 'ranking agregado inicializado', run: () => Array.isArray(state.ranking) },
+        { name: 'firebase config cargada', run: () => !!FIREBASE_CONFIG && typeof FIREBASE_CONFIG === 'object' }
       ];
 
       const failed = tests.filter(test => {

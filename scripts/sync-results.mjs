@@ -62,19 +62,25 @@ async function main() {
     db.collection('tournament').doc('groups').set({ standings: mapStandings(standingsApi.standings || []), updatedAt: FieldValue.serverTimestamp() }, { merge: true }),
   ]);
 
-  if (!changedMatches.length) {
-    console.log('Sin cambios de resultados para notificar.');
+  const matchesPendingNotification = updatedMatches.filter((match) => {
+    const hasFinalResult = Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway);
+    const resultKey = hasFinalResult ? `${match.resultHome}-${match.resultAway}` : '';
+    return hasFinalResult && match.lastNotifiedResult !== resultKey;
+  });
+
+  if (!matchesPendingNotification.length) {
+    console.log(`Ranking actualizado. Cambios detectados por API: ${changedMatches.length}. No hay partidos pendientes de notificación.`);
     return;
   }
 
   if (!APPS_SCRIPT_WEBAPP_URL || !APPS_SCRIPT_SHARED_TOKEN) {
-    console.log('No hay APPS_SCRIPT_WEBAPP_URL o APPS_SCRIPT_SHARED_TOKEN. Se omiten los correos.');
+    console.log('Hay partidos pendientes de notificación pero faltan APPS_SCRIPT_WEBAPP_URL o APPS_SCRIPT_SHARED_TOKEN.');
     return;
   }
 
   const usersByUid = new Map(users.map((u) => [u.uid || u.id, u]));
 
-  for (const match of changedMatches) {
+  for (const match of matchesPendingNotification) {
     const resultKey = `${match.resultHome}-${match.resultAway}`;
     if (!Number.isInteger(match.resultHome) || !Number.isInteger(match.resultAway)) continue;
     if (match.lastNotifiedResult === resultKey) continue;
@@ -108,7 +114,7 @@ async function main() {
     await db.collection('matches').doc(match.id).set({ lastNotifiedResult: resultKey, lastNotifiedAt: FieldValue.serverTimestamp() }, { merge: true });
   }
 
-  console.log(`Sync completa. Cambios detectados: ${changedMatches.length}`);
+  console.log(`Sync completa. Cambios detectados por API: ${changedMatches.length}. Partidos revisados para aviso: ${matchesPendingNotification.length}`);
 }
 
 async function sendViaAppsScript(payload) {

@@ -1091,9 +1091,9 @@
   <script>
     const FIREBASE_CONFIG = {
       apiKey: "AIzaSyBfhmfqoGIEaXx15IfzbWhpxhVZbPa19aQ",
-      authDomain: "el-prode-mundialista.web.app",
+      authDomain: "el-prode-mundialista.firebaseapp.com",
       projectId: "el-prode-mundialista",
-      storageBucket: "el-prode-mundialista.appspot.app",
+      storageBucket: "el-prode-mundialista.firebasestorage.app",
       messagingSenderId: "883869494864",
       appId: "1:883869494864:web:3dc5e9138e7af679bc6b55",
       measurementId: "G-KYRG0SHC8E"
@@ -1381,20 +1381,12 @@
         state.previewMode = false;
         state.firebaseReady = true;
 
-        state.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(handleFirebaseAuthError);
-        state.auth.getRedirectResult().then((result) => {
-          if (result?.user) {
-            hideAuthError();
-          }
-        }).catch(handleFirebaseAuthError);
-
         subscribeToCollections();
         state.auth.onAuthStateChanged(async (user) => {
           state.currentUser = user;
           clearSubscriptions();
           if (user) {
             await upsertCurrentUser(user);
-            hideAuthError();
           }
           subscribeToCollections();
           renderAll();
@@ -1476,17 +1468,15 @@
         return;
       }
       try {
-        hideAuthError();
         const provider = new firebase.auth.GoogleAuthProvider();
-        await state.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-        if (window.innerWidth < 820) {
+        if (window.innerWidth < 720) {
           await state.auth.signInWithRedirect(provider);
         } else {
           await state.auth.signInWithPopup(provider);
         }
       } catch (error) {
         console.error(error);
-        handleFirebaseAuthError(error);
+        alert('No se pudo iniciar sesión con Google.');
       }
     }
 
@@ -2253,28 +2243,6 @@
       return `<span class="mini-flag">${src ? `<img src="${src}" alt="Bandera de ${escapeHtml(teamName)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';" />` : ''}<span class="flag-fallback" style="display:${src ? 'none' : 'grid'}">${fallback}</span></span>`;
     }
 
-    function handleFirebaseAuthError(error) {
-      const code = String(error?.code || '');
-      const host = window.location.hostname;
-      if (code === 'auth/unauthorized-domain') {
-        showAuthError(`Google Sign-In rechazó el dominio actual (${escapeHtml(host)}). Añádelo en Firebase Authentication → Settings → Authorized domains y vuelve a probar.`);
-        return;
-      }
-      if (code === 'auth/operation-not-supported-in-this-environment') {
-        showAuthError('Este navegador móvil está bloqueando el flujo de autenticación. Prueba fuera del modo incógnito o abre la app en Chrome/Safari normal.');
-        return;
-      }
-      if (code === 'auth/popup-blocked' || code === 'auth/popup-closed-by-user') {
-        showAuthError('El navegador bloqueó la ventana de acceso. En móvil se usa redirección; vuelve a tocar “Entrar con Google”.');
-        return;
-      }
-      if (code === 'auth/network-request-failed') {
-        showAuthError('Falló la conexión durante el inicio de sesión. Revisa la red móvil o Wi‑Fi y prueba de nuevo.');
-        return;
-      }
-      showAuthError(`No se pudo iniciar sesión con Google: ${escapeHtml(code || error?.message || 'error desconocido')}`);
-    }
-
     function showAuthError(message) {
       els.authErrorNotice.innerHTML = message;
       els.authErrorNotice.classList.remove('hidden');
@@ -2299,8 +2267,7 @@
         { name: 'cambio de vista funciona', run: () => ['resumen','apuestas','clasificacion','fixture','admin'].includes(state.currentView) },
         { name: 'admin solo permitido a correo especial', run: () => ADMIN_EMAILS.length === 1 && ADMIN_EMAILS[0] === 'gerbijuan@gmail.com' },
         { name: 'cuadro final tiene seis rondas', run: () => KNOCKOUT_BRACKET.length === 6 },
-        { name: 'ranking agregado inicializado', run: () => Array.isArray(state.ranking) },
-        { name: 'firebase config cargada', run: () => !!FIREBASE_CONFIG && typeof FIREBASE_CONFIG === 'object' }
+        { name: 'ranking agregado inicializado', run: () => Array.isArray(state.ranking) }
       ];
 
       const failed = tests.filter(test => {
