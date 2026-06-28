@@ -386,18 +386,20 @@ function buildEmailHtml({ user, match, bet, points, row, position, ranking }) {
 function buildEmailText({ user, match, bet, points, row, position, ranking }) {
   const exactValue = STAGE_META[match.stage]?.exactPoints || 4;
   return [
-    'El Prode Mundialista', '', `Hola ${user.displayName || user.email || 'usuario'}, ya se actualizó un partido.`, `${match.homeTeam} ${match.resultHome}-${match.resultAway} ${match.awayTeam}`,
+    'El Prode Mundialista',
+    '',
+    `Hola ${user.displayName || user.email || 'usuario'}, ya se actualizó un partido.`,
+    `${match.homeTeam} ${match.resultHome}-${match.resultAway} ${match.awayTeam}`,
     `Tu apuesta: ${bet.home}-${bet.away}`,
     `Puntos ganados: ${points}`,
     `Regla aplicada en ${match.stage}: exacto=${exactValue}, signo=2, fallo con apuesta=1, sin jugar=0`,
     `Posición actual: #${position}`,
     `Puntos totales: ${row?.points || 0}`,
-    '', 'Clasificación actual:',
+    '',
+    'Clasificación actual:',
     ...ranking.slice(0, 5).map((r, i) => `${i + 1}. ${r.name} · ${r.points} pts`),
-    SITE_URL ? `
-Abrir app: ${SITE_URL}` : ''
-  ].join('
-');
+    SITE_URL ? `Abrir app: ${SITE_URL}` : ''
+  ].join('\n');
 }
 
 function hasFinalResult(match) { return Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway); }
