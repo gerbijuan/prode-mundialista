@@ -918,12 +918,12 @@
 
         <div class="rules">
           <div class="rule-pill">
-            <strong>🎯 4 puntos por exacto</strong>
-            <span>Si acertás el marcador completo del partido.</span>
+            <strong>🎯 Exacto progresivo</strong>
+            <span>Grupos 4, dieciseisavos 5, octavos 6, cuartos 7, semis 8, 3.º puesto 8 y final 9.</span>
           </div>
           <div class="rule-pill">
             <strong>✅ 2 puntos por signo</strong>
-            <span>Si acertás ganador o empate, aunque no lo claves exacto.</span>
+            <span>Si acertás ganador o empate, aunque no lo claves exacto, en cualquier fase.</span>
           </div>
           <div class="rule-pill">
             <strong>🏁 Jugar siempre suma</strong>
@@ -935,10 +935,11 @@
       <div class="auth-card hero-card">
         <div class="auth-title">
           <h2>🔐 Acceso</h2>
+          <span class="small">Google + Firebase</span>
         </div>
 
         <div id="setupNotice" class="notice hidden"></div>
-        <div id="authErrorNotice" class="notice hidden"></div>
+		<div id="authErrorNotice" class="notice hidden"></div>
 
         <div class="row">
           <button id="googleLoginBtn" class="btn-google">
@@ -955,7 +956,7 @@
               <div id="authUserEmail" class="small">usuario@email.com</div>
             </div>
           </div>
-          <div class="small">Tu pronóstico queda guardado por usuario y se comparte con toda la familia. Exacto = 4, signo = 2, fallo con apuesta = 1, sin jugar = 0.</div>
+          <div class="small">Tu pronóstico queda guardado por usuario y se comparte con toda la familia. Signo = 2, fallo con apuesta = 1, sin jugar = 0 y el exacto vale más a medida que avanzan las fases finales.</div>
         </div>
 
         <div id="signedOutHint" class="small hidden">
@@ -964,6 +965,10 @@
 
         <div class="row">
           <button id="logoutBtn" class="btn-secondary">Cerrar sesión</button>
+        </div>
+
+        <div class="small">
+          Si todavía no pegaste tu configuración, la app entra en <strong>modo demo local</strong>. El login real y el backend se activan completando <code>FIREBASE_CONFIG</code> y habilitando Google en Firebase Authentication.
         </div>
       </div>
     </section>
@@ -1037,7 +1042,7 @@
           <div class="card">
             <div class="section-title">
               <h3>🗓️ Fixture completo</h3>
-              <span class="small">Fase de grupos</span>
+              <span class="small">Pasados y próximos</span>
             </div>
             <div id="fullFixtureWrap"></div>
           </div>
@@ -1061,9 +1066,9 @@
             Esta zona sólo aparece si la cuenta logueada está incluida en <code>ADMIN_EMAILS</code>.
           </div>
           <div id="adminPanel" class="hidden">
-            <div class="small">Desde acá podés sembrar el fixture oficial 2026 en Firestore y cargar resultados manualmente. También se puede automatizar con una función programada que consulte una API de resultados cada hora.</div>
+            <div class="small">Desde acá podés sembrar el fixture completo 2026 en Firestore y cargar resultados manualmente. El proceso horario actualiza automáticamente resultados, ranking y cuadro final.</div>
             <div class="admin-box">
-              <button id="seedFixtureBtn" class="btn-primary">Sembrar fixture 2026 en Firebase</button>
+              <button id="seedFixtureBtn" class="btn-primary">Sembrar fixture completo en Firebase</button>
               <select id="adminMatchSelect"></select>
               <div class="row">
                 <input id="adminHomeScore" type="number" min="0" placeholder="Goles local" />
@@ -1089,6 +1094,7 @@
   </nav>
 
   <script>
+	/*
     const FIREBASE_CONFIG = {
       apiKey: "AIzaSyBfhmfqoGIEaXx15IfzbWhpxhVZbPa19aQ",
       authDomain: "el-prode-mundialista.web.app",
@@ -1098,9 +1104,19 @@
       appId: "1:883869494864:web:3dc5e9138e7af679bc6b55",
       measurementId: "G-KYRG0SHC8E"
     };
+	*/
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyBfhmfqoGIEaXx15IfzbWhpxhVZbPa19aQ",
+      authDomain: "el-prode-mundialista.firebaseapp.com",
+      projectId: "el-prode-mundialista",
+      storageBucket: "el-prode-mundialista.firebasestorage.app",
+      messagingSenderId: "883869494864",
+      appId: "1:883869494864:web:3dc5e9138e7af679bc6b55",
+      measurementId: "G-KYRG0SHC8E"
+    };
 
     const ADMIN_EMAILS = ['gerbijuan@gmail.com'];
-    const PREVIEW_STORAGE_KEY = 'prode-juanpi-preview-v3';
+    const PREVIEW_STORAGE_KEY = 'prode-mundialista-preview-v3';
 
     const FLAG_CODE_BY_TEAM = {
       'México': 'mx', 'Sudáfrica': 'za', 'Corea del Sur': 'kr', 'Chequia': 'cz', 'Canadá': 'ca', 'Bosnia y Herzegovina': 'ba',
@@ -1112,76 +1128,434 @@
       'RD Congo': 'cd', 'Inglaterra': 'england', 'Croacia': 'hr', 'Ghana': 'gh', 'Panamá': 'pa', 'Uzbekistán': 'uz', 'Colombia': 'co'
     };
 
-    const KNOCKOUT_BRACKET = [
-      {
-        round: 'Dieciseisavos',
-        window: '28 jun – 3 jul',
-        matches: [
-          { id: 'M73', home: '2º Grupo A', away: '2º Grupo B' },
-          { id: 'M74', home: '1º Grupo E', away: 'Mejor 3º A/B/C/D/F' },
-          { id: 'M75', home: '1º Grupo F', away: '2º Grupo C' },
-          { id: 'M76', home: '1º Grupo C', away: '2º Grupo F' },
-          { id: 'M77', home: '1º Grupo I', away: 'Mejor 3º C/D/F/G/H' },
-          { id: 'M78', home: '2º Grupo E', away: '2º Grupo I' },
-          { id: 'M79', home: '1º Grupo A', away: 'Mejor 3º C/E/F/H/I' },
-          { id: 'M80', home: '1º Grupo L', away: 'Mejor 3º E/H/I/J/K' },
-          { id: 'M81', home: '1º Grupo G', away: 'Mejor 3º A/E/H/I/J' },
-          { id: 'M82', home: '1º Grupo D', away: 'Mejor 3º B/E/F/I/J' },
-          { id: 'M83', home: '2º Grupo K', away: '2º Grupo L' },
-          { id: 'M84', home: '1º Grupo H', away: '2º Grupo J' },
-          { id: 'M85', home: '1º Grupo B', away: 'Mejor 3º E/F/G/I/J' },
-          { id: 'M86', home: '1º Grupo J', away: '2º Grupo H' },
-          { id: 'M87', home: '1º Grupo K', away: 'Mejor 3º D/E/I/J/L' },
-          { id: 'M88', home: '2º Grupo D', away: '2º Grupo G' }
-        ]
-      },
-      {
-        round: 'Octavos',
-        window: '4 – 7 jul',
-        matches: [
-          { id: 'M89', home: 'Ganador M73', away: 'Ganador M75' },
-          { id: 'M90', home: 'Ganador M74', away: 'Ganador M77' },
-          { id: 'M91', home: 'Ganador M76', away: 'Ganador M78' },
-          { id: 'M92', home: 'Ganador M79', away: 'Ganador M80' },
-          { id: 'M93', home: 'Ganador M83', away: 'Ganador M84' },
-          { id: 'M94', home: 'Ganador M81', away: 'Ganador M82' },
-          { id: 'M95', home: 'Ganador M86', away: 'Ganador M88' },
-          { id: 'M96', home: 'Ganador M85', away: 'Ganador M87' }
-        ]
-      },
-      {
-        round: 'Cuartos',
-        window: '9 – 11 jul',
-        matches: [
-          { id: 'M97', home: 'Ganador M89', away: 'Ganador M90' },
-          { id: 'M98', home: 'Ganador M93', away: 'Ganador M94' },
-          { id: 'M99', home: 'Ganador M91', away: 'Ganador M92' },
-          { id: 'M100', home: 'Ganador M95', away: 'Ganador M96' }
-        ]
-      },
-      {
-        round: 'Semifinales',
-        window: '14 – 15 jul',
-        matches: [
-          { id: 'M101', home: 'Ganador M97', away: 'Ganador M98' },
-          { id: 'M102', home: 'Ganador M99', away: 'Ganador M100' }
-        ]
-      },
-      {
-        round: '3º puesto',
-        window: '18 jul',
-        matches: [
-          { id: 'M103', home: 'Perdedor M101', away: 'Perdedor M102' }
-        ]
-      },
-      {
-        round: 'Final',
-        window: '19 jul',
-        matches: [
-          { id: 'M104', home: 'Ganador M101', away: 'Ganador M102', final: true }
-        ]
-      }
-    ];
+    const STAGE_META = {
+      'Fase de grupos': { stageOrder: 1, exactPoints: 4 },
+      'Dieciseisavos': { stageOrder: 2, exactPoints: 5 },
+      'Octavos': { stageOrder: 3, exactPoints: 6 },
+      'Cuartos': { stageOrder: 4, exactPoints: 7 },
+      'Semifinales': { stageOrder: 5, exactPoints: 8 },
+      '3º puesto': { stageOrder: 6, exactPoints: 8 },
+      'Final': { stageOrder: 7, exactPoints: 9 }
+    };
+
+    const KNOCKOUT_BLUEPRINT = [
+  {
+    "id": "M73",
+    "stage": "Dieciseisavos",
+    "stageOrder": 2,
+    "dateKey": "2026-06-28",
+    "kickoffAt": "2026-06-28T17:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 73,
+    "slotHome": "2º Grupo A",
+    "slotAway": "2º Grupo B",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M74",
+    "stage": "Dieciseisavos",
+    "stageOrder": 2,
+    "dateKey": "2026-06-28",
+    "kickoffAt": "2026-06-28T20:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 74,
+    "slotHome": "1º Grupo E",
+    "slotAway": "Mejor 3º A/B/C/D/F",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M75",
+    "stage": "Dieciseisavos",
+    "stageOrder": 2,
+    "dateKey": "2026-06-29",
+    "kickoffAt": "2026-06-29T17:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 75,
+    "slotHome": "1º Grupo F",
+    "slotAway": "2º Grupo C",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M76",
+    "stage": "Dieciseisavos",
+    "stageOrder": 2,
+    "dateKey": "2026-06-29",
+    "kickoffAt": "2026-06-29T20:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 76,
+    "slotHome": "1º Grupo C",
+    "slotAway": "2º Grupo F",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M77",
+    "stage": "Dieciseisavos",
+    "stageOrder": 2,
+    "dateKey": "2026-06-30",
+    "kickoffAt": "2026-06-30T17:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 77,
+    "slotHome": "1º Grupo I",
+    "slotAway": "Mejor 3º C/D/F/G/H",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M78",
+    "stage": "Dieciseisavos",
+    "stageOrder": 2,
+    "dateKey": "2026-06-30",
+    "kickoffAt": "2026-06-30T20:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 78,
+    "slotHome": "2º Grupo E",
+    "slotAway": "2º Grupo I",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M79",
+    "stage": "Dieciseisavos",
+    "stageOrder": 2,
+    "dateKey": "2026-07-01",
+    "kickoffAt": "2026-07-01T17:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 79,
+    "slotHome": "1º Grupo A",
+    "slotAway": "Mejor 3º C/E/F/H/I",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M80",
+    "stage": "Dieciseisavos",
+    "stageOrder": 2,
+    "dateKey": "2026-07-01",
+    "kickoffAt": "2026-07-01T20:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 80,
+    "slotHome": "1º Grupo L",
+    "slotAway": "Mejor 3º E/H/I/J/K",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M81",
+    "stage": "Dieciseisavos",
+    "stageOrder": 2,
+    "dateKey": "2026-07-02",
+    "kickoffAt": "2026-07-02T17:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 81,
+    "slotHome": "1º Grupo G",
+    "slotAway": "Mejor 3º A/E/H/I/J",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M82",
+    "stage": "Dieciseisavos",
+    "stageOrder": 2,
+    "dateKey": "2026-07-02",
+    "kickoffAt": "2026-07-02T20:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 82,
+    "slotHome": "1º Grupo D",
+    "slotAway": "Mejor 3º B/E/F/I/J",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M83",
+    "stage": "Dieciseisavos",
+    "stageOrder": 2,
+    "dateKey": "2026-07-03",
+    "kickoffAt": "2026-07-03T17:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 83,
+    "slotHome": "2º Grupo K",
+    "slotAway": "2º Grupo L",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M84",
+    "stage": "Dieciseisavos",
+    "stageOrder": 2,
+    "dateKey": "2026-07-03",
+    "kickoffAt": "2026-07-03T20:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 84,
+    "slotHome": "1º Grupo H",
+    "slotAway": "2º Grupo J",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M85",
+    "stage": "Dieciseisavos",
+    "stageOrder": 2,
+    "dateKey": "2026-07-03",
+    "kickoffAt": "2026-07-03T23:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 85,
+    "slotHome": "1º Grupo B",
+    "slotAway": "Mejor 3º E/F/G/I/J",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M86",
+    "stage": "Dieciseisavos",
+    "stageOrder": 2,
+    "dateKey": "2026-07-04",
+    "kickoffAt": "2026-07-04T02:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 86,
+    "slotHome": "1º Grupo J",
+    "slotAway": "2º Grupo H",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M87",
+    "stage": "Dieciseisavos",
+    "stageOrder": 2,
+    "dateKey": "2026-07-04",
+    "kickoffAt": "2026-07-04T17:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 87,
+    "slotHome": "1º Grupo K",
+    "slotAway": "Mejor 3º D/E/I/J/L",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M88",
+    "stage": "Dieciseisavos",
+    "stageOrder": 2,
+    "dateKey": "2026-07-04",
+    "kickoffAt": "2026-07-04T20:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 88,
+    "slotHome": "2º Grupo D",
+    "slotAway": "2º Grupo G",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M89",
+    "stage": "Octavos",
+    "stageOrder": 3,
+    "dateKey": "2026-07-05",
+    "kickoffAt": "2026-07-05T17:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 89,
+    "slotHome": "Ganador M73",
+    "slotAway": "Ganador M75",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M90",
+    "stage": "Octavos",
+    "stageOrder": 3,
+    "dateKey": "2026-07-05",
+    "kickoffAt": "2026-07-05T20:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 90,
+    "slotHome": "Ganador M74",
+    "slotAway": "Ganador M77",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M91",
+    "stage": "Octavos",
+    "stageOrder": 3,
+    "dateKey": "2026-07-06",
+    "kickoffAt": "2026-07-06T17:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 91,
+    "slotHome": "Ganador M76",
+    "slotAway": "Ganador M78",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M92",
+    "stage": "Octavos",
+    "stageOrder": 3,
+    "dateKey": "2026-07-06",
+    "kickoffAt": "2026-07-06T20:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 92,
+    "slotHome": "Ganador M79",
+    "slotAway": "Ganador M80",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M93",
+    "stage": "Octavos",
+    "stageOrder": 3,
+    "dateKey": "2026-07-07",
+    "kickoffAt": "2026-07-07T17:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 93,
+    "slotHome": "Ganador M83",
+    "slotAway": "Ganador M84",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M94",
+    "stage": "Octavos",
+    "stageOrder": 3,
+    "dateKey": "2026-07-07",
+    "kickoffAt": "2026-07-07T20:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 94,
+    "slotHome": "Ganador M81",
+    "slotAway": "Ganador M82",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M95",
+    "stage": "Octavos",
+    "stageOrder": 3,
+    "dateKey": "2026-07-08",
+    "kickoffAt": "2026-07-08T17:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 95,
+    "slotHome": "Ganador M86",
+    "slotAway": "Ganador M88",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M96",
+    "stage": "Octavos",
+    "stageOrder": 3,
+    "dateKey": "2026-07-08",
+    "kickoffAt": "2026-07-08T20:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 96,
+    "slotHome": "Ganador M85",
+    "slotAway": "Ganador M87",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M97",
+    "stage": "Cuartos",
+    "stageOrder": 4,
+    "dateKey": "2026-07-09",
+    "kickoffAt": "2026-07-09T20:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 97,
+    "slotHome": "Ganador M89",
+    "slotAway": "Ganador M90",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M98",
+    "stage": "Cuartos",
+    "stageOrder": 4,
+    "dateKey": "2026-07-10",
+    "kickoffAt": "2026-07-10T20:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 98,
+    "slotHome": "Ganador M93",
+    "slotAway": "Ganador M94",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M99",
+    "stage": "Cuartos",
+    "stageOrder": 4,
+    "dateKey": "2026-07-11",
+    "kickoffAt": "2026-07-11T20:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 99,
+    "slotHome": "Ganador M91",
+    "slotAway": "Ganador M92",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M100",
+    "stage": "Cuartos",
+    "stageOrder": 4,
+    "dateKey": "2026-07-12",
+    "kickoffAt": "2026-07-12T20:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 100,
+    "slotHome": "Ganador M95",
+    "slotAway": "Ganador M96",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M101",
+    "stage": "Semifinales",
+    "stageOrder": 5,
+    "dateKey": "2026-07-14",
+    "kickoffAt": "2026-07-14T20:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 101,
+    "slotHome": "Ganador M97",
+    "slotAway": "Ganador M98",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M102",
+    "stage": "Semifinales",
+    "stageOrder": 5,
+    "dateKey": "2026-07-15",
+    "kickoffAt": "2026-07-15T20:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 102,
+    "slotHome": "Ganador M99",
+    "slotAway": "Ganador M100",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M103",
+    "stage": "3º puesto",
+    "stageOrder": 6,
+    "dateKey": "2026-07-18",
+    "kickoffAt": "2026-07-18T18:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 103,
+    "slotHome": "Perdedor M101",
+    "slotAway": "Perdedor M102",
+    "group": "",
+    "final": false
+  },
+  {
+    "id": "M104",
+    "stage": "Final",
+    "stageOrder": 7,
+    "dateKey": "2026-07-19",
+    "kickoffAt": "2026-07-19T19:00:00Z",
+    "venue": "Por definir",
+    "sortOrder": 104,
+    "slotHome": "Ganador M101",
+    "slotAway": "Ganador M102",
+    "group": "",
+    "final": true
+  }
+];
 
     const OFFICIAL_FIXTURE = [
       { id: 'gs-001', stage: 'Fase de grupos', group: 'A', dateKey: '2026-06-11', kickoffAt: '2026-06-11T19:00:00Z', venue: 'Ciudad de México, México', homeTeam: 'México', awayTeam: 'Sudáfrica', sortOrder: 1 },
@@ -1286,8 +1660,8 @@
       knockoutBracketWrap: document.getElementById('knockoutBracketWrap'),
       adminDisabledNote: document.getElementById('adminDisabledNote'),
       adminPanel: document.getElementById('adminPanel'),
-      seedFixtureBtn: document.getElementById('seedFixtureBtn'),
       adminMatchSelect: document.getElementById('adminMatchSelect'),
+      seedFixtureBtn: document.getElementById('seedFixtureBtn'),
       adminHomeScore: document.getElementById('adminHomeScore'),
       adminAwayScore: document.getElementById('adminAwayScore'),
       saveResultBtn: document.getElementById('saveResultBtn'),
@@ -1325,6 +1699,9 @@
         renderMatches();
         renderNextRound();
         renderSummary();
+        renderArgentinaMatches();
+        renderFullFixture();
+        renderKnockoutBracket();
       }, 30000);
       runSelfTests();
     }
@@ -1337,37 +1714,29 @@
       els.adminMatchSelect.addEventListener('change', fillAdminInputsFromSelection);
       els.saveResultBtn.addEventListener('click', saveResultIfAdmin);
       els.clearResultBtn.addEventListener('click', clearResultIfAdmin);
-
-      document.querySelectorAll('[data-view]').forEach((btn) => {
-        btn.addEventListener('click', () => setView(btn.dataset.view));
-      });
+      document.querySelectorAll('[data-view]').forEach((btn) => btn.addEventListener('click', () => setView(btn.dataset.view)));
     }
 
     function setView(view) {
-      if (view === 'admin' && !isAdmin()) {
-        view = 'resumen';
-      }
+      if (view === 'admin' && !isAdmin()) view = 'resumen';
+      if (view === 'apuestas') state.selectedDateKey = getPreferredDateKey();
       state.currentView = view;
-      document.querySelectorAll('.view-panel').forEach(panel => {
-        panel.classList.toggle('active', panel.id === `view-${view}`);
-      });
-      document.querySelectorAll('.view-tab').forEach(tab => {
-        tab.classList.toggle('active', tab.dataset.view === view);
-      });
-      els.mobileNav.querySelectorAll('button').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.view === view);
-      });
+      document.querySelectorAll('.view-panel').forEach(panel => panel.classList.toggle('active', panel.id === `view-${view}`));
+      document.querySelectorAll('.view-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.view === view));
+      els.mobileNav.querySelectorAll('button').forEach(btn => btn.classList.toggle('active', btn.dataset.view === view));
+      if (view === 'admin') selectPreferredAdminMatch();
+      renderTabs();
+      renderMatches();
     }
 
     function initPreviewMode() {
       state.previewMode = true;
       state.firebaseReady = false;
-      state.matches = applyPreviewResults(cloneFixture(OFFICIAL_FIXTURE), state.previewStore.matchResults || {});
+      state.matches = applyPreviewResults(buildSeedMatches(), state.previewStore.matchResults || {});
       state.users = state.previewStore.users;
       state.bets = state.previewStore.bets;
       state.currentUser = state.previewStore.currentUser;
-      state.selectedDateKey = getInitialDateKey();
-
+      state.selectedDateKey = getPreferredDateKey();
       els.setupNotice.classList.remove('hidden');
       els.setupNotice.innerHTML = '<strong>Modo demo local.</strong> Ya puedes recorrer las secciones Resumen, Apuestas, Clasificación y Fixture. Para activar login real con Google y backend compartido, completa <code>FIREBASE_CONFIG</code> y habilita Google en Firebase Authentication.';
       renderAll();
@@ -1380,22 +1749,13 @@
         state.db = firebase.firestore();
         state.previewMode = false;
         state.firebaseReady = true;
-
         state.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(handleFirebaseAuthError);
-        state.auth.getRedirectResult().then((result) => {
-          if (result?.user) {
-            hideAuthError();
-          }
-        }).catch(handleFirebaseAuthError);
-
+        state.auth.getRedirectResult().then((result) => { if (result?.user) hideAuthError(); }).catch(handleFirebaseAuthError);
         subscribeToCollections();
         state.auth.onAuthStateChanged(async (user) => {
           state.currentUser = user;
           clearSubscriptions();
-          if (user) {
-            await upsertCurrentUser(user);
-            hideAuthError();
-          }
+          if (user) { await upsertCurrentUser(user); hideAuthError(); }
           subscribeToCollections();
           renderAll();
         });
@@ -1410,52 +1770,36 @@
     function subscribeToCollections() {
       clearSubscriptions();
       if (!state.db) return;
-
-      state.unsubscribers.push(
-        state.db.collection('matches').orderBy('sortOrder', 'asc').onSnapshot((snapshot) => {
-          state.matches = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          if (!state.selectedDateKey) state.selectedDateKey = getInitialDateKey();
-          renderAll();
-        })
-      );
-
-      state.unsubscribers.push(
-        state.db.collection('users').onSnapshot((snapshot) => {
-          state.users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          renderAll();
-        })
-      );
-
-      state.unsubscribers.push(
-        state.db.collection('ranking').doc('current').onSnapshot((doc) => {
-          const data = doc.data();
-          state.ranking = Array.isArray(data?.rows) ? data.rows : [];
+      state.unsubscribers.push(state.db.collection('matches').orderBy('sortOrder', 'asc').onSnapshot((snapshot) => {
+        state.matches = snapshot.docs.map(doc => normalizeMatch({ id: doc.id, ...doc.data() }));
+        state.selectedDateKey = ensureValidSelectedDateKey(state.selectedDateKey);
+        renderAll();
+      }));
+      state.unsubscribers.push(state.db.collection('users').onSnapshot((snapshot) => {
+        state.users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderAll();
+      }));
+      state.unsubscribers.push(state.db.collection('ranking').doc('current').onSnapshot((doc) => {
+        const data = doc.data();
+        state.ranking = Array.isArray(data?.rows) ? data.rows : [];
+        renderAll();
+      }, (error) => console.error('Error leyendo ranking agregado', error)));
+      if (state.currentUser?.uid) {
+        state.unsubscribers.push(state.db.collection('bets').where('uid', '==', state.currentUser.uid).onSnapshot((snapshot) => {
+          state.bets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          hideAuthError();
           renderAll();
         }, (error) => {
-          console.error('Error leyendo ranking agregado', error);
-        })
-      );
-
-      if (state.currentUser?.uid) {
-        state.unsubscribers.push(
-          state.db.collection('bets').where('uid', '==', state.currentUser.uid).onSnapshot((snapshot) => {
-            state.bets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            hideAuthError();
-            renderAll();
-          }, (error) => {
-            console.error('Error leyendo apuestas del usuario', error);
-            showAuthError('No se pudieron leer tus pronósticos desde Firestore. Revisa las reglas o vuelve a iniciar sesión.');
-          })
-        );
+          console.error('Error leyendo apuestas del usuario', error);
+          showAuthError('No se pudieron leer tus pronósticos desde Firestore. Revisa las reglas o vuelve a iniciar sesión.');
+        }));
       } else {
         state.bets = [];
       }
     }
 
     function clearSubscriptions() {
-      state.unsubscribers.forEach((unsubscribe) => {
-        try { unsubscribe(); } catch (e) {}
-      });
+      state.unsubscribers.forEach((unsubscribe) => { try { unsubscribe(); } catch (_error) {} });
       state.unsubscribers = [];
     }
 
@@ -1479,11 +1823,8 @@
         hideAuthError();
         const provider = new firebase.auth.GoogleAuthProvider();
         await state.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-        if (window.innerWidth < 820) {
-          await state.auth.signInWithRedirect(provider);
-        } else {
-          await state.auth.signInWithPopup(provider);
-        }
+        if (window.innerWidth < 820) await state.auth.signInWithRedirect(provider);
+        else await state.auth.signInWithPopup(provider);
       } catch (error) {
         console.error(error);
         handleFirebaseAuthError(error);
@@ -1491,10 +1832,7 @@
     }
 
     async function logout() {
-      if (state.previewMode) {
-        alert('Estás en modo demo local. El cierre de sesión real funciona cuando activas Firebase.');
-        return;
-      }
+      if (state.previewMode) { alert('Estás en modo demo local. El cierre de sesión real funciona cuando activas Firebase.'); return; }
       if (!state.auth) return;
       await state.auth.signOut();
     }
@@ -1502,15 +1840,9 @@
     async function seedFixtureIfAdmin() {
       if (!isAdmin() || !state.db) return;
       const batch = state.db.batch();
-      OFFICIAL_FIXTURE.forEach((match) => {
-        batch.set(state.db.collection('matches').doc(match.id), {
-          ...match,
-          kickoffAtMs: match.kickoffAtMs || Date.parse(match.kickoffAt),
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-      });
+      buildSeedMatches().forEach((match) => batch.set(state.db.collection('matches').doc(match.id), seedPayload(match), { merge: true }));
       await batch.commit();
-      alert('Fixture oficial de la fase de grupos 2026 sembrado en Firestore.');
+      alert('Fixture completo sembrado/actualizado en Firestore sin pisar resultados existentes.');
     }
 
     async function saveResultIfAdmin() {
@@ -1518,122 +1850,60 @@
       const matchId = els.adminMatchSelect.value;
       const home = parseScore(els.adminHomeScore.value);
       const away = parseScore(els.adminAwayScore.value);
-      if (!matchId || home === null || away === null) {
-        alert('Introduce ambos goles.');
-        return;
-      }
-
+      if (!matchId || home === null || away === null) { alert('Introduce ambos goles.'); return; }
       if (state.previewMode) {
         const match = state.matches.find(item => item.id === matchId);
         if (!match) return;
-        match.resultHome = home;
-        match.resultAway = away;
-        persistPreviewStore();
-        renderAll();
-        return;
+        match.resultHome = home; match.resultAway = away; match.status = 'played';
+        persistPreviewStore(); renderAll(); return;
       }
-
-      await state.db.collection('matches').doc(matchId).set({
-        resultHome: home,
-        resultAway: away,
-        status: 'played',
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
+      await state.db.collection('matches').doc(matchId).set({ resultHome: home, resultAway: away, status: 'played', updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
     }
 
     async function clearResultIfAdmin() {
       if (!isAdmin()) return;
       const matchId = els.adminMatchSelect.value;
       if (!matchId) return;
-
       if (state.previewMode) {
         const match = state.matches.find(item => item.id === matchId);
         if (!match) return;
-        match.resultHome = null;
-        match.resultAway = null;
-        persistPreviewStore();
-        renderAll();
-        return;
+        match.resultHome = null; match.resultAway = null; match.status = 'scheduled';
+        persistPreviewStore(); renderAll(); return;
       }
-
-      await state.db.collection('matches').doc(matchId).set({
-        resultHome: null,
-        resultAway: null,
-        status: 'scheduled',
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
+      await state.db.collection('matches').doc(matchId).set({ resultHome: null, resultAway: null, status: 'scheduled', updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
     }
 
     async function saveBet(matchId, homeValue, awayValue) {
       const home = parseScore(homeValue);
       const away = parseScore(awayValue);
-      if (!state.currentUser) {
-        alert('Debes iniciar sesión con Google.');
-        return;
-      }
-      if (home === null || away === null) {
-        alert('Introduce ambos goles con valores válidos.');
-        return;
-      }
-
+      if (!state.currentUser) { alert('Debes iniciar sesión con Google.'); return; }
+      if (home === null || away === null) { alert('Introduce ambos goles con valores válidos.'); return; }
       const match = state.matches.find(item => item.id === matchId);
       if (!match) return;
-      if (isMatchStarted(match.kickoffAt)) {
-        alert('Este partido ya empezó y el pronóstico está bloqueado.');
-        return;
-      }
-
+      if (isMatchStarted(match.kickoffAt)) { alert('Este partido ya empezó y el pronóstico está bloqueado.'); return; }
       if (state.previewMode) {
         const betId = `${state.currentUser.uid}_${matchId}`;
         const existing = state.previewStore.bets.find(bet => bet.id === betId);
-        if (existing) {
-          existing.home = home;
-          existing.away = away;
-        } else {
-          state.previewStore.bets.push({ id: betId, uid: state.currentUser.uid, matchId, home, away });
-        }
+        if (existing) { existing.home = home; existing.away = away; }
+        else state.previewStore.bets.push({ id: betId, uid: state.currentUser.uid, matchId, home, away });
         state.bets = state.previewStore.bets;
-        persistPreviewStore();
-        renderAll();
-        return;
+        persistPreviewStore(); renderAll(); return;
       }
-
       try {
-        await state.db.collection('bets').doc(`${state.currentUser.uid}_${matchId}`).set({
-          uid: state.currentUser.uid,
-          matchId,
-          home,
-          away,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
+        await state.db.collection('bets').doc(`${state.currentUser.uid}_${matchId}`).set({ uid: state.currentUser.uid, matchId, home, away, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
         hideAuthError();
       } catch (error) {
         console.error('Error guardando pronóstico', error);
         const message = String(error?.message || error || 'Error desconocido');
-        if (message.includes('Missing or insufficient permissions')) {
-          showAuthError('Firestore rechazó el guardado. Lo más probable es que a ese partido le falte kickoffAtMs en la colección matches. Entra con gerbijuan@gmail.com y pulsa una vez “Sembrar fixture 2026 en Firebase”.');
-        } else {
-          showAuthError(`No se pudo guardar el pronóstico: ${escapeHtml(message)}`);
-        }
+        if (message.includes('Missing or insufficient permissions')) showAuthError('Firestore rechazó el guardado. Entra con gerbijuan@gmail.com y pulsa una vez “Sembrar fixture completo en Firebase”.');
+        else showAuthError(`No se pudo guardar el pronóstico: ${escapeHtml(message)}`);
       }
     }
 
     function renderAll() {
-      if (!state.selectedDateKey) state.selectedDateKey = getInitialDateKey();
-      renderAuthState();
-      renderHeader();
-      renderSummary();
-      renderTabs();
-      renderMatches();
-      renderStandings();
-      renderNextRound();
-      renderArgentinaMatches();
-      renderFullFixture();
-      renderKnockoutBracket();
-      renderAdmin();
-      if (!isAdmin() && state.currentView === 'admin') {
-        state.currentView = 'resumen';
-      }
+      if (!state.selectedDateKey) state.selectedDateKey = getPreferredDateKey();
+      renderAuthState(); renderHeader(); renderSummary(); renderTabs(); renderMatches(); renderStandings(); renderNextRound(); renderArgentinaMatches(); renderFullFixture(); renderKnockoutBracket(); renderAdmin();
+      if (!isAdmin() && state.currentView === 'admin') state.currentView = 'resumen';
       setView(state.currentView);
     }
 
@@ -1643,7 +1913,6 @@
       els.signedInBox.classList.toggle('hidden', !signedIn);
       els.signedOutHint.classList.toggle('hidden', signedIn);
       els.googleLoginBtn.classList.toggle('hidden', signedIn);
-
       if (!signedIn) {
         els.currentUserLabel.textContent = 'Sin sesión';
         els.userPointsLabel.textContent = '0 pts';
@@ -1652,7 +1921,6 @@
         els.userAvatar.textContent = 'J';
         return;
       }
-
       const name = user.displayName || user.email?.split('@')[0] || 'Usuario';
       const email = user.email || (state.previewMode ? 'juanpi@demo.local' : '');
       els.currentUserLabel.textContent = name;
@@ -1664,107 +1932,42 @@
 
     function renderHeader() {
       const nextMatch = getUpcomingMatch();
-      if (nextMatch) {
-        els.nextMatchLabel.innerHTML = `${renderMiniFlag(nextMatch.homeTeam)} ${escapeHtml(nextMatch.homeTeam)} vs ${renderMiniFlag(nextMatch.awayTeam)} ${escapeHtml(nextMatch.awayTeam)} · ${formatDateTime(nextMatch.kickoffAt)}`;
-      } else {
-        els.nextMatchLabel.textContent = 'Sin próximos partidos';
-      }
-
-      if (!state.currentUser) {
-        els.userPointsLabel.textContent = '0 pts';
-        return;
-      }
-
+      if (nextMatch) els.nextMatchLabel.innerHTML = `${renderMiniFlag(nextMatch.homeTeam)} ${escapeHtml(nextMatch.homeTeam)} vs ${renderMiniFlag(nextMatch.awayTeam)} ${escapeHtml(nextMatch.awayTeam)} · ${formatDateTime(nextMatch.kickoffAt)}`;
+      else els.nextMatchLabel.textContent = 'Sin próximos partidos';
+      if (!state.currentUser) { els.userPointsLabel.textContent = '0 pts'; return; }
       const rankingRow = getRankingRow(state.currentUser.uid);
-      const points = rankingRow ? rankingRow.points : calculateUserPoints(state.currentUser.uid);
-      els.userPointsLabel.textContent = `${points} pts`;
+      els.userPointsLabel.textContent = `${rankingRow ? rankingRow.points : calculateUserPoints(state.currentUser.uid)} pts`;
     }
 
     function renderSummary() {
       const currentUid = state.currentUser?.uid || null;
       const myBets = currentUid ? state.bets.filter(bet => bet.uid === currentUid) : [];
-      const upcomingCount = state.matches.filter(match => !isMatchStarted(match.kickoffAt)).length;
-      const resolvedCount = state.matches.filter(match => Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway)).length;
-      const openMyBets = myBets.filter(bet => {
-        const match = state.matches.find(item => item.id === bet.matchId);
-        return match && !isMatchStarted(match.kickoffAt);
-      }).length;
+      const allMatches = getSortedMatches();
+      const upcomingCount = allMatches.filter(match => !isMatchStarted(match.kickoffAt)).length;
+      const resolvedCount = allMatches.filter(match => Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway)).length;
+      const openMyBets = myBets.filter(bet => { const match = state.matches.find(item => item.id === bet.matchId); return match && !isMatchStarted(match.kickoffAt); }).length;
       const rankingRow = currentUid ? getRankingRow(currentUid) : null;
       const myPoints = rankingRow ? rankingRow.points : (currentUid ? calculateUserPoints(currentUid) : 0);
-
       els.summaryGrid.innerHTML = `
-        <div class="summary-card">
-          <div class="label">⭐ Mis puntos</div>
-          <div class="value">${myPoints}</div>
-          <div class="small">Puntaje acumulado</div>
-        </div>
-        <div class="summary-card">
-          <div class="label">📝 Mis apuestas abiertas</div>
-          <div class="value">${openMyBets}</div>
-          <div class="small">Todavía editables</div>
-        </div>
-        <div class="summary-card">
-          <div class="label">📅 Partidos por jugar</div>
-          <div class="value">${upcomingCount}</div>
-          <div class="small">Aún sin empezar</div>
-        </div>
-        <div class="summary-card">
-          <div class="label">🏁 Resultados cargados</div>
-          <div class="value">${resolvedCount}</div>
-          <div class="small">Listos para puntuar</div>
-        </div>
-      `;
-
+        <div class="summary-card"><div class="label">⭐ Mis puntos</div><div class="value">${myPoints}</div><div class="small">Puntaje acumulado</div></div>
+        <div class="summary-card"><div class="label">📝 Mis apuestas abiertas</div><div class="value">${openMyBets}</div><div class="small">Todavía editables</div></div>
+        <div class="summary-card"><div class="label">📅 Partidos por jugar</div><div class="value">${upcomingCount}</div><div class="small">Aún sin empezar</div></div>
+        <div class="summary-card"><div class="label">🏁 Resultados cargados</div><div class="value">${resolvedCount}</div><div class="small">Listos para puntuar</div></div>`;
       const ranking = buildRanking().slice(0, 3);
-      if (!ranking.length) {
-        els.podiumWrap.innerHTML = '<div class="empty">Todavía no hay suficiente actividad para armar el podio.</div>';
-      } else {
-        els.podiumWrap.innerHTML = ranking.map((row, index) => `
-          <div class="fixture-row">
-            <div>${['🥇','🥈','🥉'][index] || '🏅'} ${escapeHtml(row.name)}</div>
-            <div><strong>${row.points} pts</strong></div>
-          </div>
-        `).join('');
-      }
+      els.podiumWrap.innerHTML = ranking.length ? ranking.map((row, index) => `<div class="fixture-row"><div>${['🥇','🥈','🥉'][index] || '🏅'} ${escapeHtml(row.name)}</div><div><strong>${row.points} pts</strong></div></div>`).join('') : '<div class="empty">Todavía no hay suficiente actividad para armar el podio.</div>';
     }
 
     function renderTabs() {
-      const dateKeys = [...new Set(state.matches.map(match => match.dateKey))].sort();
-      if (!dateKeys.length) {
-        els.tabs.innerHTML = '';
-        return;
-      }
-      if (!dateKeys.includes(state.selectedDateKey)) {
-        state.selectedDateKey = dateKeys[0];
-      }
-
-      els.tabs.innerHTML = dateKeys.map(dateKey => `
-        <button class="tab ${dateKey === state.selectedDateKey ? 'active' : ''}" data-date-key="${dateKey}">
-          📍 ${formatDateChip(dateKey)}
-        </button>
-      `).join('');
-
-      els.tabs.querySelectorAll('.tab').forEach((tab) => {
-        tab.addEventListener('click', () => {
-          state.selectedDateKey = tab.dataset.dateKey;
-          renderTabs();
-          renderMatches();
-        });
-      });
+      const entries = getDateEntries();
+      els.tabs.innerHTML = entries.map((entry) => `<button class="tab ${entry.dateKey === state.selectedDateKey ? 'active' : ''}" data-date-key="${entry.dateKey}">📍 ${formatDateChip(entry.dateKey)}</button>`).join('');
+      els.tabs.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => { state.selectedDateKey = tab.dataset.dateKey; renderTabs(); renderMatches(); }));
     }
 
     function renderMatches() {
-      const matches = state.matches.filter(match => match.dateKey === state.selectedDateKey);
+      const matches = getMatchesByDateKey(state.selectedDateKey);
       els.matchesTitle.textContent = `🎯 Apuestas · ${formatDateChip(state.selectedDateKey)}`;
       els.matchCountLabel.textContent = matches.length ? `${matches.length} partidos` : 'Sin partidos';
-
-      if (!matches.length) {
-        els.matchList.innerHTML = '<div class="empty">No hay partidos cargados para esta fecha.</div>';
-        return;
-      }
-
-      els.matchList.innerHTML = matches.map(match => renderMatchCard(match)).join('');
-
+      els.matchList.innerHTML = matches.length ? matches.map(match => renderMatchCard(match)).join('') : '<div class="empty">No hay partidos cargados para esta fecha.</div>';
       matches.forEach((match) => {
         const homeInput = document.getElementById(`bet-home-${match.id}`);
         const awayInput = document.getElementById(`bet-away-${match.id}`);
@@ -1779,217 +1982,87 @@
       const hasResult = Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway);
       const locked = isMatchStarted(match.kickoffAt);
       const points = hasResult && bet ? calculatePointsForBet(bet, match) : null;
-      const statusBadge = hasResult
-        ? `<span class="tag good">🏁 Resultado real: ${match.resultHome}-${match.resultAway}</span>`
-        : `<span class="tag ${locked ? 'warn' : 'accent'}">${locked ? '⏳ Partido iniciado' : '📝 Pronóstico abierto'}</span>`;
-      const lockBadge = locked
-        ? `<span class="tag warn">🔒 Cerró ${formatDateTime(match.kickoffAt)}</span>`
-        : `<span class="tag accent">🕒 Apuesta hasta ${formatDateTime(match.kickoffAt)}</span>`;
-      const pointsBadge = hasResult && !bet
-        ? '<span class="tag bad">➖ Sin apuesta: 0 puntos</span>'
-        : points === null
-          ? '<span class="tag">⭐ Pendiente</span>'
-          : `<span class="tag ${points >= 2 ? 'good' : 'warn'}">⭐ ${points} ${points === 1 ? 'punto' : 'puntos'}</span>`;
-
+      const exactValue = getExactPointsForStage(match.stage);
+      const pointsBadge = hasResult && !bet ? '<span class="tag bad">➖ Sin apuesta: 0 puntos</span>' : points === null ? `<span class="tag">⭐ Exacto vale ${exactValue}</span>` : `<span class="tag ${points >= 2 ? 'good' : 'warn'}">⭐ ${points} ${points === 1 ? 'punto' : 'puntos'}</span>`;
+      const resultBadge = hasResult ? `<span class="tag good">🏁 Resultado real: ${match.resultHome}-${match.resultAway}</span>` : `<span class="tag ${locked ? 'warn' : 'accent'}">${locked ? '⏳ Partido iniciado' : '📝 Pronóstico abierto'}</span>`;
+      const lockBadge = locked ? `<span class="tag warn">🔒 Cerró ${formatDateTime(match.kickoffAt)}</span>` : `<span class="tag accent">🕒 Apuesta hasta ${formatDateTime(match.kickoffAt)}</span>`;
       return `
         <article class="match-card">
-          <div class="match-header">
-            <span>Grupo ${escapeHtml(match.group)} · ${formatDateTime(match.kickoffAt)}</span>
-            <span>${escapeHtml(match.venue)}</span>
-          </div>
-
+          <div class="match-header"><span>${getStageBadgeText(match)} · ${formatDateTime(match.kickoffAt)}</span><span>${escapeHtml(match.venue || 'Por definir')}</span></div>
           <div class="match-body">
-            <div class="team">
-              ${renderFlag(match.homeTeam)}
-              <div>
-                <div class="team-name">${escapeHtml(match.homeTeam)}</div>
-                <div class="team-meta">Local</div>
-              </div>
-            </div>
-
-            <div class="score-box">
-              <input id="bet-home-${match.id}" type="number" min="0" value="${bet ? bet.home : ''}" ${!state.currentUser || locked ? 'disabled' : ''} />
-              <span class="score-sep">-</span>
-              <input id="bet-away-${match.id}" type="number" min="0" value="${bet ? bet.away : ''}" ${!state.currentUser || locked ? 'disabled' : ''} />
-            </div>
-
-            <div class="team right">
-              <div>
-                <div class="team-name">${escapeHtml(match.awayTeam)}</div>
-                <div class="team-meta">Visitante</div>
-              </div>
-              ${renderFlag(match.awayTeam)}
-            </div>
+            <div class="team">${renderFlag(match.homeTeam)}<div><div class="team-name">${escapeHtml(match.homeTeam)}</div><div class="team-meta">${match.stage === 'Fase de grupos' ? `Grupo ${escapeHtml(match.group)}` : escapeHtml(match.stage)}</div></div></div>
+            <div class="score-box"><input id="bet-home-${match.id}" type="number" min="0" value="${bet ? bet.home : ''}" ${!state.currentUser || locked ? 'disabled' : ''} /><span class="score-sep">-</span><input id="bet-away-${match.id}" type="number" min="0" value="${bet ? bet.away : ''}" ${!state.currentUser || locked ? 'disabled' : ''} /></div>
+            <div class="team right"><div><div class="team-name">${escapeHtml(match.awayTeam)}</div><div class="team-meta">${match.stage === 'Fase de grupos' ? `Grupo ${escapeHtml(match.group)}` : escapeHtml(match.stage)}</div></div>${renderFlag(match.awayTeam)}</div>
           </div>
-
-          <div class="deadline-row">
-            ${lockBadge}
-            ${statusBadge}
-            ${pointsBadge}
-          </div>
-
-          <div class="match-footer">
-            <div class="small">${bet ? `Tu apuesta: ${bet.home}-${bet.away}` : 'Todavía no apostaste este partido.'}</div>
-            <button id="save-bet-${match.id}" class="${locked || !state.currentUser ? 'btn-secondary' : 'btn-primary'}" ${locked || !state.currentUser ? 'disabled' : ''}>Guardar pronóstico</button>
-          </div>
-        </article>
-      `;
+          <div class="deadline-row">${lockBadge}${resultBadge}${pointsBadge}</div>
+          <div class="match-footer"><div class="small">${bet ? `Tu apuesta: ${bet.home}-${bet.away}` : 'Todavía no apostaste este partido.'} Exacto ${exactValue} · signo 2 · fallo con apuesta 1.</div><button id="save-bet-${match.id}" class="${locked || !state.currentUser ? 'btn-secondary' : 'btn-primary'}" ${locked || !state.currentUser ? 'disabled' : ''}>Guardar pronóstico</button></div>
+        </article>`;
     }
 
     function renderStandings() {
       const rows = buildRanking();
-      if (!rows.length) {
-        els.standingsWrap.innerHTML = '<div class="empty">Todavía no hay usuarios. Inicien sesión y arranca la competencia familiar.</div>';
-        return;
-      }
-
-      const currentUid = state.currentUser?.uid || null;
-
-      els.standingsWrap.innerHTML = `
-        <table class="standings-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Usuario</th>
-              <th>Puntos</th>
-              <th>Exactos</th>
-              <th>Aciertos</th>
-              <th>Pronósticos</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.map((row, index) => `
-              <tr class="${currentUid && currentUid === row.id ? 'highlight' : ''}">
-                <td>${index + 1}</td>
-                <td>${escapeHtml(row.name)}</td>
-                <td><strong>${row.points}</strong></td>
-                <td>${row.exact}</td>
-                <td>${row.outcomes}</td>
-                <td>${row.bets}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
+      els.standingsWrap.innerHTML = rows.length ? `<table class="standings-table"><thead><tr><th>#</th><th>Usuario</th><th>Puntos</th><th>Exactos</th><th>Aciertos</th><th>Pronósticos</th></tr></thead><tbody>${rows.map((row, index) => `<tr class="${state.currentUser?.uid && (row.uid || row.id) === state.currentUser.uid ? 'highlight' : ''}"><td>${index + 1}</td><td>${escapeHtml(row.name)}</td><td><strong>${row.points}</strong></td><td>${row.exact}</td><td>${row.outcomes}</td><td>${row.bets}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">Todavía no hay usuarios. Inicien sesión y arranca la competencia familiar.</div>';
     }
 
     function renderNextRound() {
       const nextDateKey = getNextUpcomingDateKey();
-      if (!nextDateKey) {
-        els.nextRoundWrap.innerHTML = '<div class="empty">No hay próximas fechas pendientes.</div>';
-        return;
-      }
-
-      const matches = state.matches.filter(match => match.dateKey === nextDateKey);
-      els.nextRoundWrap.innerHTML = `
-        <div class="tag accent">📍 ${formatDateChip(nextDateKey)}</div>
-        ${matches.map(match => `
-          <div class="fixture-mini">
-            <div class="inline-flag-pair">${renderMiniFlag(match.homeTeam)} ${escapeHtml(match.homeTeam)} vs ${renderMiniFlag(match.awayTeam)} ${escapeHtml(match.awayTeam)}</div>
-            <div class="small">${formatTime(match.kickoffAt)}</div>
-          </div>
-        `).join('')}
-      `;
+      if (!nextDateKey) { els.nextRoundWrap.innerHTML = '<div class="empty">No hay próximas fechas pendientes.</div>'; return; }
+      const matches = getMatchesByDateKey(nextDateKey).slice(0, 6);
+      els.nextRoundWrap.innerHTML = `<div class="tag accent">📍 ${formatDateChip(nextDateKey)}</div>${matches.map(match => `<div class="fixture-mini"><div class="inline-flag-pair">${renderMiniFlag(match.homeTeam)} ${escapeHtml(match.homeTeam)} vs ${renderMiniFlag(match.awayTeam)} ${escapeHtml(match.awayTeam)}</div><div class="small">${formatTime(match.kickoffAt)} · ${escapeHtml(match.stage)}</div></div>`).join('')}`;
     }
 
     function renderArgentinaMatches() {
-      const argentinaMatches = [...state.matches]
-        .filter(match => match.homeTeam === 'Argentina' || match.awayTeam === 'Argentina')
-        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-
-      if (!argentinaMatches.length) {
-        els.argentinaMatchesWrap.innerHTML = '<div class="empty">Todavía no hay partidos de Argentina cargados.</div>';
-        return;
-      }
-
-      els.argentinaMatchesWrap.innerHTML = argentinaMatches.map(match => {
-        const hasResult = Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway);
-        const resultLabel = hasResult
-          ? `<span class="tag good">Resultado: ${match.resultHome}-${match.resultAway}</span>`
-          : `<span class="tag accent">${isMatchStarted(match.kickoffAt) ? 'En juego o cerrado' : 'Próximo partido'}</span>`;
-        return `
-          <div class="fixture-row">
-            <div>
-              <div class="inline-flag-pair">${renderMiniFlag(match.homeTeam)} ${escapeHtml(match.homeTeam)} vs ${renderMiniFlag(match.awayTeam)} ${escapeHtml(match.awayTeam)}</div>
-              <div class="small">Grupo ${escapeHtml(match.group)} · ${formatDateTime(match.kickoffAt)} · ${escapeHtml(match.venue)}</div>
-            </div>
-            <div>${resultLabel}</div>
-          </div>
-        `;
-      }).join('');
+      const argentinaMatches = getSortedMatches().filter(match => match.homeTeam === 'Argentina' || match.awayTeam === 'Argentina');
+      els.argentinaMatchesWrap.innerHTML = argentinaMatches.length ? argentinaMatches.map(match => renderFixtureRow(match, true)).join('') : '<div class="empty">Argentina todavía no tiene cruces confirmados más allá de los que ya están en Firestore.</div>';
     }
 
     function renderFullFixture() {
-      const byDate = [...new Set(state.matches.map(match => match.dateKey))].sort();
-      if (!byDate.length) {
-        els.fullFixtureWrap.innerHTML = '<div class="empty">No hay fixture cargado.</div>';
-        return;
-      }
+      const allMatches = getSortedMatches();
+      const pastMatches = allMatches.filter(match => isPastMatch(match));
+      const upcomingMatches = allMatches.filter(match => !isPastMatch(match));
+      els.fullFixtureWrap.innerHTML = `<details><summary><strong>Partidos pasados</strong> · ${pastMatches.length}</summary><div style="margin-top:12px">${pastMatches.length ? renderFixtureGroups(pastMatches, true) : '<div class="empty">Todavía no hay partidos pasados.</div>'}</div></details><details open style="margin-top:14px"><summary><strong>Partidos próximos</strong> · ${upcomingMatches.length}</summary><div style="margin-top:12px">${upcomingMatches.length ? renderFixtureGroups(upcomingMatches, false) : '<div class="empty">No quedan partidos próximos.</div>'}</div></details>`;
+    }
 
-      els.fullFixtureWrap.innerHTML = byDate.map(dateKey => {
-        const matches = state.matches.filter(match => match.dateKey === dateKey);
-        return `
-          <div class="fixture-day">${formatDateChip(dateKey)}</div>
-          ${matches.map(match => `
-            <div class="fixture-row">
-              <div class="inline-flag-pair">${renderMiniFlag(match.homeTeam)} ${escapeHtml(match.homeTeam)} vs ${renderMiniFlag(match.awayTeam)} ${escapeHtml(match.awayTeam)}</div>
-              <div class="small">${formatTime(match.kickoffAt)}</div>
-            </div>
-          `).join('')}
-        `;
-      }).join('');
+    function renderFixtureGroups(matches, includeResults) {
+      return groupMatchesByDate(matches).map(group => `<div class="fixture-day">${formatDateChip(group.dateKey)}</div>${group.matchesForDate.map(match => renderFixtureRow(match, includeResults)).join('')}`).join('');
+    }
+
+    function renderFixtureRow(match, includeResults) {
+      const hasResult = Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway);
+      const rightSide = includeResults ? (hasResult ? `<span class="tag good">Resultado: ${match.resultHome}-${match.resultAway}</span>` : `<span class="tag warn">${match.status === 'in_play' ? 'En juego' : 'Sin resultado'}</span>`) : `<div class="small">${formatTime(match.kickoffAt)} · ${escapeHtml(match.stage)}</div>`;
+      return `<div class="fixture-row"><div><div class="inline-flag-pair">${renderMiniFlag(match.homeTeam)} ${escapeHtml(match.homeTeam)} vs ${renderMiniFlag(match.awayTeam)} ${escapeHtml(match.awayTeam)}</div><div class="small">${getStageBadgeText(match)} · ${escapeHtml(match.venue || 'Por definir')}</div></div><div>${rightSide}</div></div>`;
     }
 
     function renderKnockoutBracket() {
-      els.knockoutBracketWrap.innerHTML = `
-        <div class="bracket-wrap">
-          <div class="bracket-grid">
-            ${KNOCKOUT_BRACKET.map((round) => `
-              <div class="bracket-column">
-                <div class="bracket-round-title">
-                  <span>${round.round}</span>
-                  <small>${round.window}</small>
-                </div>
-                ${round.matches.map((match) => `
-                  <div class="bracket-match ${match.final ? 'final' : ''}">
-                    <div class="bracket-match-header">
-                      <span>${match.id}</span>
-                      <span>${round.round}</span>
-                    </div>
-                    <div class="bracket-team">${escapeHtml(match.home)}</div>
-                    <div class="bracket-team">${escapeHtml(match.away)}</div>
-                  </div>
-                `).join('')}
-              </div>
-            `).join('')}
-          </div>
-        </div>
-        <div class="bracket-note">
-          El cuadro muestra el camino oficial desde la fase de grupos hasta la final. Los equipos reales se completarán cuando se definan los 1º, 2º y los ocho mejores terceros de grupo.
-        </div>
-      `;
+      const stages = getKnockoutStageNames();
+      const columns = stages.map((stageName) => {
+        const stageMatches = getKnockoutMatchesByStage(stageName);
+        const fallback = KNOCKOUT_BLUEPRINT.filter(match => match.stage === stageName).map(match => normalizeMatch({ ...match, homeTeam: match.slotHome, awayTeam: match.slotAway }));
+        const matches = stageMatches.length ? stageMatches : fallback;
+        return `<div class="bracket-column"><div class="bracket-round-title"><span>${escapeHtml(stageName)}</span><small>Exacto ${getExactPointsForStage(stageName)} puntos</small></div>${matches.map(match => `<div class="bracket-match ${match.final ? 'final' : ''}"><div class="bracket-match-header"><span>${escapeHtml(match.id)}</span><span>${formatDateChip(match.dateKey)}</span></div><div class="bracket-team">${escapeHtml(match.homeTeam || match.slotHome || 'Por definir')}</div><div class="bracket-team">${escapeHtml(match.awayTeam || match.slotAway || 'Por definir')}</div>${Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway) ? `<div class="bracket-note">Resultado: ${match.resultHome}-${match.resultAway}</div>` : ''}</div>`).join('')}</div>`;
+      });
+      els.knockoutBracketWrap.innerHTML = `<div class="bracket-wrap"><div class="bracket-grid">${columns.join('')}</div></div><div class="bracket-note">El cuadro final se alimenta desde Firestore. El proceso horario va completando equipos y resultados automáticamente ronda a ronda.</div>`;
     }
 
     function renderAdmin() {
       const admin = isAdmin();
-      const desktopAdminTab = document.getElementById('desktopAdminTab');
-      const mobileAdminTab = document.getElementById('mobileAdminTab');
-      const adminView = document.getElementById('view-admin');
-
-      if (desktopAdminTab) desktopAdminTab.classList.toggle('hidden', !admin);
-      if (mobileAdminTab) mobileAdminTab.classList.toggle('hidden', !admin);
-      if (adminView) adminView.classList.toggle('hidden', !admin);
-
+      document.getElementById('desktopAdminTab')?.classList.toggle('hidden', !admin);
+      document.getElementById('mobileAdminTab')?.classList.toggle('hidden', !admin);
+      document.getElementById('view-admin')?.classList.toggle('hidden', !admin);
       els.adminDisabledNote.classList.toggle('hidden', admin);
       els.adminPanel.classList.toggle('hidden', !admin);
-
-      const options = state.matches.map((match) => {
-        const resultLabel = Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway)
-          ? ` · ${match.resultHome}-${match.resultAway}`
-          : '';
-        return `<option value="${match.id}">${formatDateChip(match.dateKey)} · Grupo ${match.group} · ${escapeHtml(match.homeTeam)} vs ${escapeHtml(match.awayTeam)}${resultLabel}</option>`;
+      const options = getSortedMatches().map((match) => {
+        const label = Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway) ? ` · ${match.resultHome}-${match.resultAway}` : '';
+        return `<option value="${match.id}">${formatDateChip(match.dateKey)} · ${getStageBadgeText(match)} · ${escapeHtml(match.homeTeam)} vs ${escapeHtml(match.awayTeam)}${label}</option>`;
       });
       els.adminMatchSelect.innerHTML = options.length ? options.join('') : '<option value="">No hay partidos</option>';
+      if (!Array.from(els.adminMatchSelect.options).some(opt => opt.value === els.adminMatchSelect.value)) selectPreferredAdminMatch();
+      fillAdminInputsFromSelection();
+    }
+
+    function selectPreferredAdminMatch() {
+      const preferred = getPreferredAdminMatchId();
+      if (preferred) els.adminMatchSelect.value = preferred;
       fillAdminInputsFromSelection();
     }
 
@@ -2000,324 +2073,117 @@
     }
 
     function buildRanking() {
-      if (!state.previewMode && Array.isArray(state.ranking) && state.ranking.length) {
-        return [...state.ranking].sort((a, b) => b.points - a.points || b.exact - a.exact || b.outcomes - a.outcomes || a.name.localeCompare(b.name, 'es'));
-      }
-
-      return state.users
-        .map((user) => {
-          const uid = user.uid || user.id;
-          return {
-            id: uid,
-            uid,
-            name: user.displayName || user.email || 'Usuario',
-            points: calculateUserPoints(uid),
-            exact: countExactHits(uid),
-            outcomes: countOutcomeHits(uid),
-            bets: countUserBets(uid)
-          };
-        })
-        .sort((a, b) => b.points - a.points || b.exact - a.exact || b.outcomes - a.outcomes || a.name.localeCompare(b.name, 'es'));
+      if (!state.previewMode && Array.isArray(state.ranking) && state.ranking.length) return [...state.ranking].sort((a, b) => b.points - a.points || b.exact - a.exact || b.outcomes - a.outcomes || a.name.localeCompare(b.name, 'es'));
+      return state.users.map((user) => {
+        const uid = user.uid || user.id;
+        return { id: uid, uid, name: user.displayName || user.email || 'Usuario', points: calculateUserPoints(uid), exact: countExactHits(uid), outcomes: countOutcomeHits(uid), bets: countUserBets(uid) };
+      }).sort((a, b) => b.points - a.points || b.exact - a.exact || b.outcomes - a.outcomes || a.name.localeCompare(b.name, 'es'));
     }
 
-    function getRankingRow(uid) {
-      const ranking = buildRanking();
-      return ranking.find((row) => (row.uid || row.id) === uid) || null;
+    function getRankingRow(uid) { return buildRanking().find((row) => (row.uid || row.id) === uid) || null; }
+    function getCurrentUserBet(matchId) { if (!state.currentUser) return null; return state.bets.find(bet => bet.uid === state.currentUser.uid && bet.matchId === matchId) || null; }
+    function calculateUserPoints(uid) { return state.bets.filter(bet => bet.uid === uid).reduce((total, bet) => { const match = state.matches.find(item => item.id === bet.matchId); if (!match || !Number.isInteger(match.resultHome) || !Number.isInteger(match.resultAway)) return total; return total + calculatePointsForBet(bet, match); }, 0); }
+    function countExactHits(uid) { return state.bets.filter(bet => bet.uid === uid).reduce((count, bet) => { const match = state.matches.find(item => item.id === bet.matchId); if (!match || !Number.isInteger(match.resultHome) || !Number.isInteger(match.resultAway)) return count; return bet.home === match.resultHome && bet.away === match.resultAway ? count + 1 : count; }, 0); }
+    function countOutcomeHits(uid) { return state.bets.filter(bet => bet.uid === uid).reduce((count, bet) => { const match = state.matches.find(item => item.id === bet.matchId); if (!match || !Number.isInteger(match.resultHome) || !Number.isInteger(match.resultAway)) return count; return getOutcome(bet.home, bet.away) === getOutcome(match.resultHome, match.resultAway) ? count + 1 : count; }, 0); }
+    function countUserBets(uid) { return state.bets.filter(bet => bet.uid === uid).length; }
+    function calculatePointsForBet(bet, match) { if (!Number.isInteger(match.resultHome) || !Number.isInteger(match.resultAway)) return 0; if (bet.home === match.resultHome && bet.away === match.resultAway) return getExactPointsForStage(match.stage); if (getOutcome(bet.home, bet.away) === getOutcome(match.resultHome, match.resultAway)) return 2; return 1; }
+    function getExactPointsForStage(stage) { return STAGE_META[stage]?.exactPoints || 4; }
+    function getOutcome(home, away) { return home > away ? 'home' : home < away ? 'away' : 'draw'; }
+    function getUpcomingMatch() { return getSortedMatches().find(match => !isMatchStarted(match.kickoffAt)) || null; }
+    function getNextUpcomingDateKey() { return getUpcomingMatch()?.dateKey || null; }
+    function getDateEntries() { const map = new Map(); getSortedMatches().forEach((match) => { if (!map.has(match.dateKey)) map.set(match.dateKey, match.kickoffAtMs); }); return [...map.entries()].sort((a, b) => a[1] - b[1]).map(([dateKey]) => ({ dateKey })); }
+    function getMatchesByDateKey(dateKey) { return getSortedMatches().filter(match => match.dateKey === dateKey); }
+    function getSortedMatches() { return [...state.matches].sort((a, b) => (a.kickoffAtMs || getDateMs(a.kickoffAt) || 0) - (b.kickoffAtMs || getDateMs(b.kickoffAt) || 0) || (a.sortOrder || 0) - (b.sortOrder || 0)); }
+    function getPreferredDateKey() { const matches = getSortedMatches(); if (!matches.length) return '2026-06-11'; const todayKey = formatLocalDateKey(new Date()); const todayMatches = matches.filter(match => match.dateKey === todayKey); if (todayMatches.length) return todayKey; const upcoming = matches.find(match => !isMatchStarted(match.kickoffAt)); if (upcoming) return upcoming.dateKey; const nearest = [...matches].sort((a, b) => Math.abs(a.kickoffAtMs - Date.now()) - Math.abs(b.kickoffAtMs - Date.now()))[0]; return nearest?.dateKey || matches[0].dateKey; }
+    function ensureValidSelectedDateKey(currentKey) { const valid = getDateEntries().some(entry => entry.dateKey === currentKey); return valid ? currentKey : getPreferredDateKey(); }
+    function getPreferredAdminMatchId() { const matches = getSortedMatches(); const todayKey = formatLocalDateKey(new Date()); const todayMatches = matches.filter(match => match.dateKey === todayKey); if (todayMatches.length) return todayMatches[0].id; const nearest = [...matches].sort((a, b) => Math.abs(a.kickoffAtMs - Date.now()) - Math.abs(b.kickoffAtMs - Date.now()))[0]; return nearest?.id || matches[0]?.id || ''; }
+    function groupMatchesByDate(matches) { const map = new Map(); matches.forEach((match) => { if (!map.has(match.dateKey)) map.set(match.dateKey, []); map.get(match.dateKey).push(match); }); return [...map.entries()].sort((a, b) => a[1][0].kickoffAtMs - b[1][0].kickoffAtMs).map(([dateKey, matchesForDate]) => ({ dateKey, matchesForDate: matchesForDate.sort((a, b) => a.kickoffAtMs - b.kickoffAtMs) })); }
+    function getKnockoutStageNames() { return Object.keys(STAGE_META).filter(stage => STAGE_META[stage].stageOrder > 1).sort((a, b) => STAGE_META[a].stageOrder - STAGE_META[b].stageOrder); }
+    function getKnockoutMatchesByStage(stageName) { return getSortedMatches().filter(match => match.stage === stageName); }
+    function isPastMatch(match) { return Number.isInteger(match.resultHome) || Number.isInteger(match.resultAway) || isMatchStarted(match.kickoffAt); }
+    function getStageBadgeText(match) { return match.stage === 'Fase de grupos' ? `Grupo ${escapeHtml(match.group)}` : escapeHtml(match.stage || 'Partido'); }
+    function isMatchStarted(kickoffAt) { const time = getDateMs(kickoffAt); return time !== null ? time <= Date.now() : false; }
+
+    function normalizeMatch(raw) {
+      const stage = raw.stage || 'Fase de grupos';
+      const stageMeta = STAGE_META[stage] || STAGE_META['Fase de grupos'];
+      const kickoffAt = raw.kickoffAt || `${raw.dateKey || '2026-06-11'}T12:00:00Z`;
+      return {
+        ...raw,
+        stage,
+        stageOrder: Number.isInteger(raw.stageOrder) ? raw.stageOrder : stageMeta.stageOrder,
+        group: raw.group || '',
+        homeTeam: raw.homeTeam || raw.slotHome || raw.home || 'Por definir',
+        awayTeam: raw.awayTeam || raw.slotAway || raw.away || 'Por definir',
+        slotHome: raw.slotHome || raw.home || raw.homePlaceholder || null,
+        slotAway: raw.slotAway || raw.away || raw.awayPlaceholder || null,
+        kickoffAt,
+        kickoffAtMs: raw.kickoffAtMs || Date.parse(kickoffAt),
+        dateKey: raw.dateKey || kickoffAt.slice(0, 10),
+        venue: raw.venue || 'Por definir',
+        sortOrder: Number.isInteger(raw.sortOrder) ? raw.sortOrder : 999,
+        resultHome: Number.isInteger(raw.resultHome) ? raw.resultHome : null,
+        resultAway: Number.isInteger(raw.resultAway) ? raw.resultAway : null,
+        status: raw.status || 'scheduled',
+        final: !!raw.final
+      };
     }
 
-    function getCurrentUserBet(matchId) {
-      if (!state.currentUser) return null;
-      return state.bets.find(bet => bet.uid === state.currentUser.uid && bet.matchId === matchId) || null;
+    function buildSeedMatches() {
+      const groups = OFFICIAL_FIXTURE.map(match => normalizeMatch({ ...match, stage: 'Fase de grupos', stageOrder: 1, kickoffAtMs: Date.parse(match.kickoffAt) }));
+      const knockouts = KNOCKOUT_BLUEPRINT.map(match => normalizeMatch({ ...match, homeTeam: match.slotHome, awayTeam: match.slotAway, kickoffAtMs: Date.parse(match.kickoffAt) }));
+      return [...groups, ...knockouts];
     }
 
-    function calculateUserPoints(uid) {
-      return state.bets
-        .filter(bet => bet.uid === uid)
-        .reduce((total, bet) => {
-          const match = state.matches.find(item => item.id === bet.matchId);
-          if (!match || !Number.isInteger(match.resultHome) || !Number.isInteger(match.resultAway)) return total;
-          return total + calculatePointsForBet(bet, match);
-        }, 0);
+    function seedPayload(match) {
+      return { id: match.id, stage: match.stage, stageOrder: match.stageOrder, group: match.group || '', dateKey: match.dateKey, kickoffAt: match.kickoffAt, kickoffAtMs: match.kickoffAtMs || Date.parse(match.kickoffAt), venue: match.venue || 'Por definir', homeTeam: match.homeTeam, awayTeam: match.awayTeam, slotHome: match.slotHome || null, slotAway: match.slotAway || null, sortOrder: match.sortOrder || 999, final: !!match.final, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
     }
 
-    function countExactHits(uid) {
-      return state.bets
-        .filter(bet => bet.uid === uid)
-        .reduce((count, bet) => {
-          const match = state.matches.find(item => item.id === bet.matchId);
-          if (!match || !Number.isInteger(match.resultHome) || !Number.isInteger(match.resultAway)) return count;
-          return bet.home === match.resultHome && bet.away === match.resultAway ? count + 1 : count;
-        }, 0);
-    }
-
-    function countOutcomeHits(uid) {
-      return state.bets
-        .filter(bet => bet.uid === uid)
-        .reduce((count, bet) => {
-          const match = state.matches.find(item => item.id === bet.matchId);
-          if (!match || !Number.isInteger(match.resultHome) || !Number.isInteger(match.resultAway)) return count;
-          return getOutcome(bet.home, bet.away) === getOutcome(match.resultHome, match.resultAway) ? count + 1 : count;
-        }, 0);
-    }
-
-    function countUserBets(uid) {
-      return state.bets.filter(bet => bet.uid === uid).length;
-    }
-
-    function calculatePointsForBet(bet, match) {
-      if (bet.home === match.resultHome && bet.away === match.resultAway) return 4;
-      if (getOutcome(bet.home, bet.away) === getOutcome(match.resultHome, match.resultAway)) return 2;
-      return 1;
-    }
-
-    function getOutcome(home, away) {
-      if (home > away) return 'home';
-      if (home < away) return 'away';
-      return 'draw';
-    }
-
-    function getUpcomingMatch() {
-      const now = Date.now();
-      return [...state.matches]
-        .filter(match => getDateMs(match.kickoffAt) > now)
-        .sort((a, b) => getDateMs(a.kickoffAt) - getDateMs(b.kickoffAt))[0] || null;
-    }
-
-    function getNextUpcomingDateKey() {
-      const next = getUpcomingMatch();
-      return next?.dateKey || null;
-    }
-
-    function getInitialDateKey() {
-      return [...new Set(state.matches.map(match => match.dateKey))].sort()[0] || '2026-06-11';
-    }
-
-    function isMatchStarted(kickoffAt) {
-      const time = getDateMs(kickoffAt);
-      return time !== null ? time <= Date.now() : false;
-    }
-
-    function isAdmin() {
-      const email = state.currentUser?.email?.toLowerCase() || '';
-      if (state.previewMode) return true;
-      return ADMIN_EMAILS.map(item => item.toLowerCase()).includes(email);
-    }
-
-    function isFirebaseAvailable() {
-      return typeof window.firebase !== 'undefined';
-    }
-
-    function isFirebaseConfigured() {
-      return FIREBASE_CONFIG.apiKey && !String(FIREBASE_CONFIG.apiKey).includes('PON_AQUI');
-    }
-
-    function parseScore(value) {
-      if (value === '' || value === null || value === undefined) return null;
-      const num = Number(value);
-      if (!Number.isInteger(num) || num < 0) return null;
-      return num;
-    }
-
-    function safeDate(value) {
-      if (typeof value !== 'string' && typeof value !== 'number' && !(value instanceof Date)) return null;
-      const date = new Date(value);
-      return Number.isNaN(date.getTime()) ? null : date;
-    }
-
-    function getDateMs(value) {
-      const date = safeDate(value);
-      return date ? date.getTime() : null;
-    }
-
-    function formatDateTime(value) {
-      const date = safeDate(value);
-      if (!date) return 'Fecha inválida';
-      return new Intl.DateTimeFormat('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      }).format(date);
-    }
-
-    function formatTime(value) {
-      const date = safeDate(value);
-      if (!date) return '--:--';
-      return new Intl.DateTimeFormat('es-ES', {
-        hour: '2-digit',
-        minute: '2-digit'
-      }).format(date);
-    }
-
-    function formatDateChip(dateKey) {
-      const date = safeDate(`${dateKey}T12:00:00`);
-      if (!date) return dateKey;
-      return new Intl.DateTimeFormat('es-ES', {
-        weekday: 'short',
-        day: '2-digit',
-        month: 'short'
-      }).format(date);
-    }
-
-    function escapeHtml(str) {
-      return String(str ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-    }
-
-    function cloneFixture(fixture) {
-      return fixture.map(match => ({ ...match, resultHome: match.resultHome ?? null, resultAway: match.resultAway ?? null }));
-    }
+    function parseScore(value) { if (value === '' || value === null || value === undefined) return null; const num = Number(value); return Number.isInteger(num) && num >= 0 ? num : null; }
+    function safeDate(value) { if (typeof value !== 'string' && typeof value !== 'number' && !(value instanceof Date)) return null; const date = new Date(value); return Number.isNaN(date.getTime()) ? null : date; }
+    function getDateMs(value) { const date = safeDate(value); return date ? date.getTime() : null; }
+    function formatDateTime(value) { const date = safeDate(value); if (!date) return 'Fecha inválida'; return new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(date); }
+    function formatTime(value) { const date = safeDate(value); if (!date) return '--:--'; return new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' }).format(date); }
+    function formatDateChip(dateKey) { const date = safeDate(`${dateKey}T12:00:00`); if (!date) return dateKey; return new Intl.DateTimeFormat('es-ES', { weekday: 'short', day: '2-digit', month: 'short' }).format(date); }
+    function formatLocalDateKey(date) { const dtf = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }); const parts = Object.fromEntries(dtf.formatToParts(date).filter(p => p.type !== 'literal').map(p => [p.type, p.value])); return `${parts.year}-${parts.month}-${parts.day}`; }
+    function escapeHtml(str) { return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
 
     function loadPreviewStore() {
-      const fallback = {
-        currentUser: { uid: 'preview-jp', displayName: 'Juan Pablo', email: 'juanpi@demo.local' },
-        users: [
-          { uid: 'preview-jp', displayName: 'Juan Pablo', email: 'juanpi@demo.local' },
-          { uid: 'preview-flor', displayName: 'Flor', email: 'flor@demo.local' },
-          { uid: 'preview-dante', displayName: 'Dante', email: 'dante@demo.local' }
-        ],
-        bets: [],
-        matchResults: {}
-      };
-
-      try {
-        const raw = localStorage.getItem(PREVIEW_STORAGE_KEY);
-        if (!raw) return fallback;
-        const parsed = JSON.parse(raw);
-        return {
-          currentUser: parsed.currentUser || fallback.currentUser,
-          users: Array.isArray(parsed.users) && parsed.users.length ? parsed.users : fallback.users,
-          bets: Array.isArray(parsed.bets) ? parsed.bets : [],
-          matchResults: parsed.matchResults && typeof parsed.matchResults === 'object' ? parsed.matchResults : {}
-        };
-      } catch (error) {
-        console.warn('No se pudo cargar el modo demo.', error);
-        return fallback;
-      }
+      const fallback = { currentUser: { uid: 'preview-jp', displayName: 'Juan Pablo', email: 'juanpi@demo.local' }, users: [{ uid: 'preview-jp', displayName: 'Juan Pablo', email: 'juanpi@demo.local' }, { uid: 'preview-flor', displayName: 'Flor', email: 'flor@demo.local' }, { uid: 'preview-dante', displayName: 'Dante', email: 'dante@demo.local' }], bets: [], matchResults: {} };
+      try { const raw = localStorage.getItem(PREVIEW_STORAGE_KEY); if (!raw) return fallback; const parsed = JSON.parse(raw); return { currentUser: parsed.currentUser || fallback.currentUser, users: Array.isArray(parsed.users) && parsed.users.length ? parsed.users : fallback.users, bets: Array.isArray(parsed.bets) ? parsed.bets : [], matchResults: parsed.matchResults && typeof parsed.matchResults === 'object' ? parsed.matchResults : {} }; } catch (error) { console.warn('No se pudo cargar el modo demo.', error); return fallback; }
     }
+    function persistPreviewStore() { state.previewStore.matchResults = Object.fromEntries(state.matches.filter(match => Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway)).map(match => [match.id, { resultHome: match.resultHome, resultAway: match.resultAway }])); localStorage.setItem(PREVIEW_STORAGE_KEY, JSON.stringify(state.previewStore)); }
+    function applyPreviewResults(matches, matchResults) { return matches.map(match => normalizeMatch({ ...match, resultHome: Number.isInteger(matchResults?.[match.id]?.resultHome) ? matchResults[match.id].resultHome : match.resultHome, resultAway: Number.isInteger(matchResults?.[match.id]?.resultAway) ? matchResults[match.id].resultAway : match.resultAway })); }
+    function getFlagCode(teamName) { return FLAG_CODE_BY_TEAM[teamName] || null; }
+    function getCustomFlagSvg(teamName) { if (teamName === 'Inglaterra') return `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 45'><rect width='60' height='45' fill='white'/><rect x='24' width='12' height='45' fill='%23c8102e'/><rect y='16.5' width='60' height='12' fill='%23c8102e'/></svg>`)}`; if (teamName === 'Escocia') return `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 45'><rect width='60' height='45' fill='%230052b4'/><path d='M0 0 L8 0 L60 37 L60 45 L52 45 L0 8 Z' fill='white'/><path d='M52 0 L60 0 L60 8 L8 45 L0 45 L0 37 Z' fill='white'/></svg>`)}`; return null; }
+    function getFlagSrc(teamName) { const custom = getCustomFlagSvg(teamName); if (custom) return custom; const code = getFlagCode(teamName); return code ? `https://flagcdn.com/w80/${code}.png` : null; }
+    function renderFlag(teamName) { const src = getFlagSrc(teamName); const fallback = escapeHtml(String(teamName || '').slice(0,1).toUpperCase() || '?'); return `<div class="flag">${src ? `<img class="flag-img" src="${src}" alt="Bandera de ${escapeHtml(teamName)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';" />` : ''}<span class="flag-fallback" style="display:${src ? 'none' : 'grid'}">${fallback}</span></div>`; }
+    function renderMiniFlag(teamName) { const src = getFlagSrc(teamName); const fallback = escapeHtml(String(teamName || '').slice(0,1).toUpperCase() || '?'); return `<span class="mini-flag">${src ? `<img src="${src}" alt="Bandera de ${escapeHtml(teamName)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';" />` : ''}<span class="flag-fallback" style="display:${src ? 'none' : 'grid'}">${fallback}</span></span>`; }
+    function handleFirebaseAuthError(error) { const code = String(error?.code || ''); const host = window.location.hostname; if (code === 'auth/unauthorized-domain') { showAuthError(`Google Sign-In rechazó el dominio actual (${escapeHtml(host)}). Añádelo en Firebase Authentication → Settings → Authorized domains y vuelve a probar.`); return; } if (code === 'auth/operation-not-supported-in-this-environment') { showAuthError('Este navegador móvil está bloqueando el flujo de autenticación. Prueba fuera del modo incógnito o abre la app en Chrome/Safari normal.'); return; } if (code === 'auth/popup-blocked' || code === 'auth/popup-closed-by-user') { showAuthError('El navegador bloqueó la ventana de acceso. En móvil se usa redirección; vuelve a tocar “Entrar con Google”.'); return; } if (code === 'auth/network-request-failed') { showAuthError('Falló la conexión durante el inicio de sesión. Revisa la red móvil o Wi‑Fi y prueba de nuevo.'); return; } showAuthError(`No se pudo iniciar sesión con Google: ${escapeHtml(code || error?.message || 'error desconocido')}`); }
+function showAuthError(message) {
+  const el = document.getElementById('authErrorNotice');
+  if (!el) {
+    console.error('No existe #authErrorNotice en el DOM');
+    return;
+  }
+  el.textContent = message || 'Se produjo un error de autenticación.';
+  el.classList.remove('hidden');
+}
 
-    function persistPreviewStore() {
-      state.previewStore.matchResults = Object.fromEntries(
-        state.matches
-          .filter(match => Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway))
-          .map(match => [match.id, { resultHome: match.resultHome, resultAway: match.resultAway }])
-      );
-      localStorage.setItem(PREVIEW_STORAGE_KEY, JSON.stringify(state.previewStore));
-    }
+function hideAuthError() {
+  const el = document.getElementById('authErrorNotice');
+  if (!el) {
+    console.warn('No existe #authErrorNotice en el DOM');
+    return;
+  }
+  el.classList.add('hidden');
+  el.textContent = '';
+}
+    function isAdmin() { const email = state.currentUser?.email?.toLowerCase() || ''; if (state.previewMode) return true; return ADMIN_EMAILS.map(item => item.toLowerCase()).includes(email); }
+    function isFirebaseAvailable() { return typeof window.firebase !== 'undefined'; }
+    function isFirebaseConfigured() { return FIREBASE_CONFIG.apiKey && !String(FIREBASE_CONFIG.apiKey).includes('PON_AQUI'); }
+    function runSelfTests() { const tests = [{ name: 'grupos exacto 4', run: () => calculatePointsForBet({ home: 2, away: 1 }, { stage: 'Fase de grupos', resultHome: 2, resultAway: 1 }) === 4 }, { name: 'dieciseisavos exacto 5', run: () => calculatePointsForBet({ home: 2, away: 1 }, { stage: 'Dieciseisavos', resultHome: 2, resultAway: 1 }) === 5 }, { name: 'final exacto 9', run: () => calculatePointsForBet({ home: 2, away: 1 }, { stage: 'Final', resultHome: 2, resultAway: 1 }) === 9 }, { name: 'signo 2', run: () => calculatePointsForBet({ home: 1, away: 0 }, { stage: 'Octavos', resultHome: 3, resultAway: 0 }) === 2 }, { name: 'fallo 1', run: () => calculatePointsForBet({ home: 0, away: 1 }, { stage: 'Cuartos', resultHome: 3, resultAway: 0 }) === 1 }, { name: 'incluye knockout', run: () => buildSeedMatches().length > OFFICIAL_FIXTURE.length }, { name: 'fecha preferida', run: () => !!getPreferredDateKey() } ]; const failed = tests.filter(test => { try { return !test.run(); } catch (error) { console.error(`Test falló: ${test.name}`, error); return true; } }); if (failed.length) console.error('Fallaron tests internos:', failed.map(t => t.name)); else console.info('Tests internos OK:', tests.map(t => t.name)); }
 
-    function applyPreviewResults(matches, matchResults) {
-      return matches.map(match => {
-        const saved = matchResults?.[match.id];
-        return {
-          ...match,
-          resultHome: Number.isInteger(saved?.resultHome) ? saved.resultHome : null,
-          resultAway: Number.isInteger(saved?.resultAway) ? saved.resultAway : null
-        };
-      });
-    }
-
-    function getFlagCode(teamName) {
-      return FLAG_CODE_BY_TEAM[teamName] || null;
-    }
-
-    function getCustomFlagSvg(teamName) {
-      if (teamName === 'Inglaterra') {
-        return `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 45'><rect width='60' height='45' fill='white'/><rect x='24' width='12' height='45' fill='%23c8102e'/><rect y='16.5' width='60' height='12' fill='%23c8102e'/></svg>`)}`;
-      }
-      if (teamName === 'Escocia') {
-        return `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 45'><rect width='60' height='45' fill='%230052b4'/><path d='M0 0 L8 0 L60 37 L60 45 L52 45 L0 8 Z' fill='white'/><path d='M52 0 L60 0 L60 8 L8 45 L0 45 L0 37 Z' fill='white'/></svg>`)}`;
-      }
-      return null;
-    }
-
-    function getFlagSrc(teamName) {
-      const custom = getCustomFlagSvg(teamName);
-      if (custom) return custom;
-      const code = getFlagCode(teamName);
-      return code ? `https://flagcdn.com/w80/${code}.png` : null;
-    }
-
-    function renderFlag(teamName) {
-      const src = getFlagSrc(teamName);
-      const fallback = escapeHtml(teamName.slice(0, 1).toUpperCase());
-      return `<div class="flag">${src ? `<img class="flag-img" src="${src}" alt="Bandera de ${escapeHtml(teamName)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';" />` : ''}<span class="flag-fallback" style="display:${src ? 'none' : 'grid'}">${fallback}</span></div>`;
-    }
-
-    function renderMiniFlag(teamName) {
-      const src = getFlagSrc(teamName);
-      const fallback = escapeHtml(teamName.slice(0, 1).toUpperCase());
-      return `<span class="mini-flag">${src ? `<img src="${src}" alt="Bandera de ${escapeHtml(teamName)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';" />` : ''}<span class="flag-fallback" style="display:${src ? 'none' : 'grid'}">${fallback}</span></span>`;
-    }
-
-    function handleFirebaseAuthError(error) {
-      const code = String(error?.code || '');
-      const host = window.location.hostname;
-      if (code === 'auth/unauthorized-domain') {
-        showAuthError(`Google Sign-In rechazó el dominio actual (${escapeHtml(host)}). Añádelo en Firebase Authentication → Settings → Authorized domains y vuelve a probar.`);
-        return;
-      }
-      if (code === 'auth/operation-not-supported-in-this-environment') {
-        showAuthError('Este navegador móvil está bloqueando el flujo de autenticación. Prueba fuera del modo incógnito o abre la app en Chrome/Safari normal.');
-        return;
-      }
-      if (code === 'auth/popup-blocked' || code === 'auth/popup-closed-by-user') {
-        showAuthError('El navegador bloqueó la ventana de acceso. En móvil se usa redirección; vuelve a tocar “Entrar con Google”.');
-        return;
-      }
-      if (code === 'auth/network-request-failed') {
-        showAuthError('Falló la conexión durante el inicio de sesión. Revisa la red móvil o Wi‑Fi y prueba de nuevo.');
-        return;
-      }
-      showAuthError(`No se pudo iniciar sesión con Google: ${escapeHtml(code || error?.message || 'error desconocido')}`);
-    }
-
-    function showAuthError(message) {
-      els.authErrorNotice.innerHTML = message;
-      els.authErrorNotice.classList.remove('hidden');
-    }
-
-    function hideAuthError() {
-      els.authErrorNotice.classList.add('hidden');
-      els.authErrorNotice.innerHTML = '';
-    }
-
-    function runSelfTests() {
-      const tests = [
-        { name: 'safeDate rechaza fechas inválidas', run: () => safeDate('fecha-rota') === null },
-        { name: 'parseScore rechaza negativos', run: () => parseScore(-1) === null },
-        { name: 'puntaje exacto suma 4', run: () => calculatePointsForBet({ home: 2, away: 1 }, { resultHome: 2, resultAway: 1 }) === 4 },
-        { name: 'puntaje por signo suma 2', run: () => calculatePointsForBet({ home: 1, away: 0 }, { resultHome: 3, resultAway: 0 }) === 2 },
-        { name: 'puntaje por apostar y fallar suma 1', run: () => calculatePointsForBet({ home: 0, away: 1 }, { resultHome: 3, resultAway: 0 }) === 1 },
-        { name: 'fixture tiene códigos de bandera', run: () => OFFICIAL_FIXTURE.every(match => FLAG_CODE_BY_TEAM[match.homeTeam] && FLAG_CODE_BY_TEAM[match.awayTeam]) },
-        { name: 'fixture tiene fechas válidas', run: () => OFFICIAL_FIXTURE.every(match => !!safeDate(match.kickoffAt)) },
-        { name: 'antes de iniciar permite apostar', run: () => isMatchStarted(new Date(Date.now() + 60000).toISOString()) === false },
-        { name: 'al iniciar o después bloquea apuesta', run: () => isMatchStarted(new Date(Date.now() - 60000).toISOString()) === true },
-        { name: 'cambio de vista funciona', run: () => ['resumen','apuestas','clasificacion','fixture','admin'].includes(state.currentView) },
-        { name: 'admin solo permitido a correo especial', run: () => ADMIN_EMAILS.length === 1 && ADMIN_EMAILS[0] === 'gerbijuan@gmail.com' },
-        { name: 'cuadro final tiene seis rondas', run: () => KNOCKOUT_BRACKET.length === 6 },
-        { name: 'ranking agregado inicializado', run: () => Array.isArray(state.ranking) },
-        { name: 'firebase config cargada', run: () => !!FIREBASE_CONFIG && typeof FIREBASE_CONFIG === 'object' }
-      ];
-
-      const failed = tests.filter(test => {
-        try {
-          return !test.run();
-        } catch (error) {
-          console.error(`Test falló: ${test.name}`, error);
-          return true;
-        }
-      });
-
-      if (failed.length) {
-        console.error('Fallaron tests internos:', failed.map(t => t.name));
-      } else {
-        console.info('Tests internos OK:', tests.map(t => t.name));
-      }
-    }
   </script>
 </body>
 </html>
