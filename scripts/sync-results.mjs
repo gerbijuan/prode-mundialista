@@ -60,6 +60,7 @@ async function main() {
 
   const syncResult = await syncMatchesFromApi(db, currentMatches, matchesApi.matches || []);
   currentMatches = syncResult.updatedMatches;
+  currentMatches = await restoreResultsFromNotifications(db, currentMatches);
 
   const standings = normalizeStandings(standingsApi.standings || []);
   const { groupSlots, bestThirds } = buildGroupSlots(standings);
@@ -111,7 +112,30 @@ async function main() {
 
 async function upsertSeedMatches(db, seedMatches) {
   const batch = db.batch();
-  seedMatches.forEach((match) => batch.set(db.collection('matches').doc(match.id), { ...match, updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
+  seedMatches.forEach((match) => {
+    const payload = {
+      stage: match.stage,
+      stageOrder: match.stageOrder,
+      group: match.group || '',
+      slotHome: match.slotHome || null,
+      slotAway: match.slotAway || null,
+      kickoffAt: match.kickoffAt,
+      kickoffAtMs: match.kickoffAtMs,
+      dateKey: match.dateKey,
+      venue: match.venue || 'Por definir',
+      sortOrder: match.sortOrder,
+      final: !!match.final,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    if (match.stage === 'Fase de grupos') {
+      payload.homeTeam = match.homeTeam;
+      payload.awayTeam = match.awayTeam;
+    } else {
+      if (hasConcreteTeam(match.homeTeam) && !hasPlaceholderLike(match.homeTeam)) payload.homeTeam = match.homeTeam;
+      if (hasConcreteTeam(match.awayTeam) && !hasPlaceholderLike(match.awayTeam)) payload.awayTeam = match.awayTeam;
+    }
+    batch.set(db.collection('matches').doc(match.id), payload, { merge: true });
+  });
   await batch.commit();
 }
 
@@ -236,6 +260,47 @@ function buildApiPatch(match) {
     winnerTeam: match.winnerTeam || null,
     lastSyncedAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
+  };
+}
+
+
+async function restoreResultsFromNotifications(db, currentMatches) {
+  const matches = currentMatches.map((match) => ({ ...match }));
+  const batch = db.batch();
+  let writes = 0;
+
+  for (const match of matches) {
+    const recovered = recoverMatchFromNotificationKey(match);
+    if (!recovered) continue;
+    Object.assign(match, recovered);
+    batch.set(db.collection('matches').doc(match.id), {
+      resultHome: match.resultHome,
+      resultAway: match.resultAway,
+      winnerTeam: match.winnerTeam || null,
+      status: match.status || 'played',
+      restoredFromNotification: true,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    writes += 1;
+  }
+
+  if (writes) await batch.commit();
+  return matches;
+}
+
+function recoverMatchFromNotificationKey(match) {
+  if (hasFinalResult(match)) return null;
+  const key = String(match.lastNotifiedResult || '').trim();
+  const parsed = key.match(/^(\d+)-(\d+)\|(.*)$/);
+  if (!parsed) return null;
+  const resultHome = Number(parsed[1]);
+  const resultAway = Number(parsed[2]);
+  const winnerTeam = parsed[3] ? parsed[3].trim() : null;
+  return {
+    resultHome,
+    resultAway,
+    winnerTeam: winnerTeam || match.winnerTeam || null,
+    status: 'played',
   };
 }
 
@@ -438,8 +503,21 @@ function getNotificationKey(match) {
 }
 function hasConcreteTeam(name) { return !!name && !hasPlaceholderLike(name); }
 function hasPlaceholderLike(name) { return /^(1º|2º|Mejor 3º|Ganador|Perdedor|Por definir)/i.test(String(name || '')); }
-function getWinner(match) { if (!match || !hasFinalResult(match)) return null; if (match.resultHome > match.resultAway) return match.homeTeam; if (match.resultAway > match.resultHome) return match.awayTeam; return `${match.homeTeam} / ${match.awayTeam}`; }
-function getLoser(match) { if (!match || !hasFinalResult(match)) return null; if (match.resultHome < match.resultAway) return match.homeTeam; if (match.resultAway < match.resultHome) return match.awayTeam; return `${match.homeTeam} / ${match.awayTeam}`; }
+function getWinner(match) {
+  if (!match || !hasFinalResult(match)) return null;
+  if (match.winnerTeam) return match.winnerTeam;
+  if (match.resultHome > match.resultAway) return match.homeTeam;
+  if (match.resultAway > match.resultHome) return match.awayTeam;
+  return `${match.homeTeam} / ${match.awayTeam}`;
+}
+function getLoser(match) {
+  if (!match || !hasFinalResult(match)) return null;
+  if (match.winnerTeam === match.homeTeam) return match.awayTeam;
+  if (match.winnerTeam === match.awayTeam) return match.homeTeam;
+  if (match.resultHome < match.resultAway) return match.homeTeam;
+  if (match.resultAway < match.resultHome) return match.awayTeam;
+  return `${match.homeTeam} / ${match.awayTeam}`;
+}
 
 function normalizeMatch(raw) {
   const stage = raw.stage || 'Fase de grupos';

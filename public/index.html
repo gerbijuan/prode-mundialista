@@ -2184,12 +2184,20 @@
 
     function buildSeedMatches() {
       const groups = OFFICIAL_FIXTURE.map(match => normalizeMatch({ ...match, stage: 'Fase de grupos', stageOrder: 1, kickoffAtMs: Date.parse(match.kickoffAt) }));
-      const knockouts = KNOCKOUT_BLUEPRINT.map(match => normalizeMatch({ ...match, homeTeam: match.slotHome, awayTeam: match.slotAway, kickoffAtMs: Date.parse(match.kickoffAt) }));
+      const knockouts = KNOCKOUT_BLUEPRINT.map(match => normalizeMatch({ ...match, kickoffAtMs: Date.parse(match.kickoffAt) }));
       return [...groups, ...knockouts];
     }
 
     function seedPayload(match) {
-      return { id: match.id, stage: match.stage, stageOrder: match.stageOrder, group: match.group || '', dateKey: match.dateKey, kickoffAt: match.kickoffAt, kickoffAtMs: match.kickoffAtMs || Date.parse(match.kickoffAt), venue: match.venue || 'Por definir', homeTeam: match.homeTeam, awayTeam: match.awayTeam, slotHome: match.slotHome || null, slotAway: match.slotAway || null, winnerTeam: match.winnerTeam || null, sortOrder: match.sortOrder || 999, final: !!match.final, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+      const payload = { id: match.id, stage: match.stage, stageOrder: match.stageOrder, group: match.group || '', dateKey: match.dateKey, kickoffAt: match.kickoffAt, kickoffAtMs: match.kickoffAtMs || Date.parse(match.kickoffAt), venue: match.venue || 'Por definir', slotHome: match.slotHome || null, slotAway: match.slotAway || null, winnerTeam: match.winnerTeam || null, sortOrder: match.sortOrder || 999, final: !!match.final, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+      if (match.stage === 'Fase de grupos') {
+        payload.homeTeam = match.homeTeam;
+        payload.awayTeam = match.awayTeam;
+      } else {
+        if (hasConcreteTeam(match.homeTeam) && !hasPlaceholderLike(match.homeTeam)) payload.homeTeam = match.homeTeam;
+        if (hasConcreteTeam(match.awayTeam) && !hasPlaceholderLike(match.awayTeam)) payload.awayTeam = match.awayTeam;
+      }
+      return payload;
     }
 
     function parseScore(value) { if (value === '' || value === null || value === undefined) return null; const num = Number(value); return Number.isInteger(num) && num >= 0 ? num : null; }
