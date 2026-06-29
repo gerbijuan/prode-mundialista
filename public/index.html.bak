@@ -939,6 +939,7 @@
         </div>
 
         <div id="setupNotice" class="notice hidden"></div>
+		<div id="authErrorNotice" class="notice hidden"></div>
 
         <div class="row">
           <button id="googleLoginBtn" class="btn-google">
@@ -1093,17 +1094,29 @@
   </nav>
 
   <script>
+	/*
     const FIREBASE_CONFIG = {
-      apiKey: 'PON_AQUI_TU_API_KEY',
-      authDomain: 'PON_AQUI_TU_AUTH_DOMAIN',
-      projectId: 'PON_AQUI_TU_PROJECT_ID',
-      storageBucket: 'PON_AQUI_TU_STORAGE_BUCKET',
-      messagingSenderId: 'PON_AQUI_TU_MESSAGING_SENDER_ID',
-      appId: 'PON_AQUI_TU_APP_ID'
+      apiKey: "AIzaSyBfhmfqoGIEaXx15IfzbWhpxhVZbPa19aQ",
+      authDomain: "el-prode-mundialista.web.app",
+      projectId: "el-prode-mundialista",
+      storageBucket: "el-prode-mundialista.appspot.app",
+      messagingSenderId: "883869494864",
+      appId: "1:883869494864:web:3dc5e9138e7af679bc6b55",
+      measurementId: "G-KYRG0SHC8E"
+    };
+	*/
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyBfhmfqoGIEaXx15IfzbWhpxhVZbPa19aQ",
+      authDomain: "el-prode-mundialista.firebaseapp.com",
+      projectId: "el-prode-mundialista",
+      storageBucket: "el-prode-mundialista.firebasestorage.app",
+      messagingSenderId: "883869494864",
+      appId: "1:883869494864:web:3dc5e9138e7af679bc6b55",
+      measurementId: "G-KYRG0SHC8E"
     };
 
     const ADMIN_EMAILS = ['gerbijuan@gmail.com'];
-    const PREVIEW_STORAGE_KEY = 'prode-mundialista-preview-v5';
+    const PREVIEW_STORAGE_KEY = 'prode-mundialista-preview-v3';
 
     const FLAG_CODE_BY_TEAM = {
       'México': 'mx', 'Sudáfrica': 'za', 'Corea del Sur': 'kr', 'Chequia': 'cz', 'Canadá': 'ca', 'Bosnia y Herzegovina': 'ba',
@@ -2147,8 +2160,25 @@
     function renderFlag(teamName) { const src = getFlagSrc(teamName); const fallback = escapeHtml(String(teamName || '').slice(0,1).toUpperCase() || '?'); return `<div class="flag">${src ? `<img class="flag-img" src="${src}" alt="Bandera de ${escapeHtml(teamName)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';" />` : ''}<span class="flag-fallback" style="display:${src ? 'none' : 'grid'}">${fallback}</span></div>`; }
     function renderMiniFlag(teamName) { const src = getFlagSrc(teamName); const fallback = escapeHtml(String(teamName || '').slice(0,1).toUpperCase() || '?'); return `<span class="mini-flag">${src ? `<img src="${src}" alt="Bandera de ${escapeHtml(teamName)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';" />` : ''}<span class="flag-fallback" style="display:${src ? 'none' : 'grid'}">${fallback}</span></span>`; }
     function handleFirebaseAuthError(error) { const code = String(error?.code || ''); const host = window.location.hostname; if (code === 'auth/unauthorized-domain') { showAuthError(`Google Sign-In rechazó el dominio actual (${escapeHtml(host)}). Añádelo en Firebase Authentication → Settings → Authorized domains y vuelve a probar.`); return; } if (code === 'auth/operation-not-supported-in-this-environment') { showAuthError('Este navegador móvil está bloqueando el flujo de autenticación. Prueba fuera del modo incógnito o abre la app en Chrome/Safari normal.'); return; } if (code === 'auth/popup-blocked' || code === 'auth/popup-closed-by-user') { showAuthError('El navegador bloqueó la ventana de acceso. En móvil se usa redirección; vuelve a tocar “Entrar con Google”.'); return; } if (code === 'auth/network-request-failed') { showAuthError('Falló la conexión durante el inicio de sesión. Revisa la red móvil o Wi‑Fi y prueba de nuevo.'); return; } showAuthError(`No se pudo iniciar sesión con Google: ${escapeHtml(code || error?.message || 'error desconocido')}`); }
-    function showAuthError(message) { els.authErrorNotice.innerHTML = message; els.authErrorNotice.classList.remove('hidden'); }
-    function hideAuthError() { els.authErrorNotice.classList.add('hidden'); els.authErrorNotice.innerHTML = ''; }
+function showAuthError(message) {
+  const el = document.getElementById('authErrorNotice');
+  if (!el) {
+    console.error('No existe #authErrorNotice en el DOM');
+    return;
+  }
+  el.textContent = message || 'Se produjo un error de autenticación.';
+  el.classList.remove('hidden');
+}
+
+function hideAuthError() {
+  const el = document.getElementById('authErrorNotice');
+  if (!el) {
+    console.warn('No existe #authErrorNotice en el DOM');
+    return;
+  }
+  el.classList.add('hidden');
+  el.textContent = '';
+}
     function isAdmin() { const email = state.currentUser?.email?.toLowerCase() || ''; if (state.previewMode) return true; return ADMIN_EMAILS.map(item => item.toLowerCase()).includes(email); }
     function isFirebaseAvailable() { return typeof window.firebase !== 'undefined'; }
     function isFirebaseConfigured() { return FIREBASE_CONFIG.apiKey && !String(FIREBASE_CONFIG.apiKey).includes('PON_AQUI'); }

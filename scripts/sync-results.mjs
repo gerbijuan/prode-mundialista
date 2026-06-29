@@ -73,7 +73,7 @@ async function main() {
     db.collection('tournament').doc('knockout').set({ bracket: buildBracketPayload(currentMatches), updatedAt: FieldValue.serverTimestamp() }, { merge: true }),
   ]);
 
-  const matchesToNotify = currentMatches.filter((match) => hasFinalResult(match) && `${match.resultHome}-${match.resultAway}` !== match.lastNotifiedResult);
+  const matchesToNotify = currentMatches.filter((match) => hasFinalResult(match) && getNotificationKey(match) !== match.lastNotifiedResult);
 
   if (!APPS_SCRIPT_WEBAPP_URL || !APPS_SCRIPT_SHARED_TOKEN) {
     console.log(`Sync completa. Cambios detectados por API: ${syncResult.changedMatches.length}. Partidos revisados para aviso: ${matchesToNotify.length}`);
@@ -111,8 +111,30 @@ async function main() {
 
 async function upsertSeedMatches(db, seedMatches) {
   const batch = db.batch();
-  seedMatches.forEach((match) => batch.set(db.collection('matches').doc(match.id), { ...match, updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
+  seedMatches.forEach((match) => {
+    const seed = buildSeedUpsert(match);
+    batch.set(db.collection('matches').doc(match.id), { ...seed, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  });
   await batch.commit();
+}
+
+function buildSeedUpsert(match) {
+  return {
+    id: match.id,
+    stage: match.stage,
+    stageOrder: match.stageOrder,
+    group: match.group || '',
+    homeTeam: match.homeTeam,
+    awayTeam: match.awayTeam,
+    slotHome: match.slotHome || null,
+    slotAway: match.slotAway || null,
+    kickoffAt: match.kickoffAt,
+    kickoffAtMs: match.kickoffAtMs,
+    dateKey: match.dateKey,
+    venue: match.venue || 'Por definir',
+    sortOrder: match.sortOrder,
+    final: !!match.final,
+  };
 }
 
 function normalizeGroupSeeds(seed) {
@@ -194,6 +216,10 @@ async function syncMatchesFromApi(db, currentMatches, apiMatches) {
 }
 
 function applyApiToMatch(local, apiMatch, stage) {
+  const homeTeam = normalizeApiTeam(apiMatch?.homeTeam?.name) || local.homeTeam;
+  const awayTeam = normalizeApiTeam(apiMatch?.awayTeam?.name) || local.awayTeam;
+  const resultHome = toNullableInt(apiMatch?.score?.fullTime?.home);
+  const resultAway = toNullableInt(apiMatch?.score?.fullTime?.away);
   const next = {
     externalMatchId: Number(apiMatch?.id),
     stage,
@@ -202,13 +228,14 @@ function applyApiToMatch(local, apiMatch, stage) {
     kickoffAtMs: Date.parse(apiMatch?.utcDate || local.kickoffAt),
     dateKey: (apiMatch?.utcDate || local.kickoffAt).slice(0, 10),
     venue: apiMatch?.venue || local.venue || 'Por definir',
-    homeTeam: normalizeApiTeam(apiMatch?.homeTeam?.name) || local.homeTeam,
-    awayTeam: normalizeApiTeam(apiMatch?.awayTeam?.name) || local.awayTeam,
-    resultHome: toNullableInt(apiMatch?.score?.fullTime?.home),
-    resultAway: toNullableInt(apiMatch?.score?.fullTime?.away),
-    status: mapApiStatus(apiMatch?.status, toNullableInt(apiMatch?.score?.fullTime?.home), toNullableInt(apiMatch?.score?.fullTime?.away)),
+    homeTeam,
+    awayTeam,
+    resultHome,
+    resultAway,
+    winnerTeam: resolveApiWinnerTeam(apiMatch, homeTeam, awayTeam, resultHome, resultAway, stage),
+    status: mapApiStatus(apiMatch?.status, resultHome, resultAway),
   };
-  const changed = ['externalMatchId','stage','stageOrder','kickoffAt','kickoffAtMs','dateKey','venue','homeTeam','awayTeam','resultHome','resultAway','status'].some((key) => JSON.stringify(local[key]) !== JSON.stringify(next[key]));
+  const changed = ['externalMatchId','stage','stageOrder','kickoffAt','kickoffAtMs','dateKey','venue','homeTeam','awayTeam','resultHome','resultAway','winnerTeam','status'].some((key) => JSON.stringify(local[key]) !== JSON.stringify(next[key]));
   if (!changed) return false;
   Object.assign(local, next);
   return true;
@@ -228,6 +255,7 @@ function buildApiPatch(match) {
     resultHome: match.resultHome,
     resultAway: match.resultAway,
     status: match.status,
+    winnerTeam: match.winnerTeam || null,
     lastSyncedAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   };
@@ -327,8 +355,8 @@ function buildRanking(matches, bets, users) {
       if (!match || !hasFinalResult(match)) continue;
       const betPoints = calculatePointsForBet(bet, match);
       points += betPoints;
-      if (bet.home === match.resultHome && bet.away === match.resultAway) exact += 1;
-      if (getOutcome(bet.home, bet.away) === getOutcome(match.resultHome, match.resultAway)) outcomes += 1;
+      if (isExactBet(bet, match)) exact += 1;
+      if (didBetHitSecondaryRule(bet, match)) outcomes += 1;
     }
     return { uid, name: user.displayName || user.email || 'Usuario', email: user.email || '', points, exact, outcomes, bets: userBets.length };
   }).sort((a, b) => b.points - a.points || b.exact - a.exact || b.outcomes - a.outcomes || a.name.localeCompare(b.name, 'es'));
@@ -336,8 +364,8 @@ function buildRanking(matches, bets, users) {
 
 function calculatePointsForBet(bet, match) {
   if (!hasFinalResult(match)) return 0;
-  if (bet.home === match.resultHome && bet.away === match.resultAway) return STAGE_META[match.stage]?.exactPoints || 4;
-  if (getOutcome(bet.home, bet.away) === getOutcome(match.resultHome, match.resultAway)) return 2;
+  if (isExactBet(bet, match)) return STAGE_META[match.stage]?.exactPoints || 4;
+  if (didBetHitSecondaryRule(bet, match)) return 2;
   return 1;
 }
 
@@ -350,6 +378,7 @@ function buildBracketPayload(matches) {
       awayTeam: match.awayTeam,
       resultHome: match.resultHome,
       resultAway: match.resultAway,
+      winnerTeam: match.winnerTeam || null,
       kickoffAt: match.kickoffAt,
       dateKey: match.dateKey,
     })),
@@ -371,7 +400,7 @@ async function sendViaAppsScript(payload) {
 
 async function markNotified(db, match) {
   await db.collection('matches').doc(match.id).set({
-    lastNotifiedResult: `${match.resultHome}-${match.resultAway}`,
+    lastNotifiedResult: getNotificationKey(match),
     lastNotifiedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
 }
@@ -380,30 +409,56 @@ function buildEmailHtml({ user, match, bet, points, row, position, ranking }) {
   const exactValue = STAGE_META[match.stage]?.exactPoints || 4;
   const top = ranking.slice(0, 5).map((r, i) => `<li>${i + 1}. ${escapeHtml(r.name)} · ${r.points} pts</li>`).join('');
   const cta = SITE_URL ? `<p><a href="${SITE_URL}" target="_blank" rel="noreferrer">Abrir El Prode Mundialista</a></p>` : '';
-  return `<div style="font-family:Arial,sans-serif;color:#14314f;line-height:1.55"><h2 style="margin:0 0 12px">El Prode Mundialista</h2><p>Hola <strong>${escapeHtml(user.displayName || user.email || 'usuario')}</strong>, ya se actualizó un partido.</p><p><strong>${escapeHtml(match.homeTeam)} ${match.resultHome}-${match.resultAway} ${escapeHtml(match.awayTeam)}</strong></p><p>Tu apuesta fue <strong>${bet.home}-${bet.away}</strong> y sumaste <strong>${points} ${points === 1 ? 'punto' : 'puntos'}</strong>.</p><p>Regla aplicada en ${escapeHtml(match.stage)}: exacto = ${exactValue}, signo = 2, fallo con apuesta = 1, sin jugar = 0.</p><p>Ahora estás en la posición <strong>#${position}</strong> con <strong>${row?.points || 0} pts</strong>.</p><h3 style="margin:20px 0 8px">Clasificación actual</h3><ol style="padding-left:20px;margin:0">${top}</ol>${cta}</div>`;
+  const winnerLine = match.winnerTeam ? `<p>Clasificado / ganador de la llave: <strong>${escapeHtml(match.winnerTeam)}</strong>.</p>` : '';
+  const betLine = `<p>Tu apuesta fue <strong>${bet.home}-${bet.away}${bet.winnerTeam ? ` · clasifica ${escapeHtml(bet.winnerTeam)}` : ''}</strong> y sumaste <strong>${points} ${points === 1 ? 'punto' : 'puntos'}</strong>.</p>`;
+  return `<div style="font-family:Arial,sans-serif;color:#14314f;line-height:1.55"><h2 style="margin:0 0 12px">El Prode Mundialista</h2><p>Hola <strong>${escapeHtml(user.displayName || user.email || 'usuario')}</strong>, ya se actualizó un partido.</p><p><strong>${escapeHtml(match.homeTeam)} ${match.resultHome}-${match.resultAway} ${escapeHtml(match.awayTeam)}</strong></p>${winnerLine}${betLine}<p>Regla aplicada en ${escapeHtml(match.stage)}: exacto = ${exactValue}, signo/clasificado = 2, fallo con apuesta = 1, sin jugar = 0.</p><p>Ahora estás en la posición <strong>#${position}</strong> con <strong>${row?.points || 0} pts</strong>.</p><h3 style="margin:20px 0 8px">Clasificación actual</h3><ol style="padding-left:20px;margin:0">${top}</ol>${cta}</div>`;
 }
 
 function buildEmailText({ user, match, bet, points, row, position, ranking }) {
   const exactValue = STAGE_META[match.stage]?.exactPoints || 4;
   return [
-    'El Prode Mundialista',
-    '',
-    `Hola ${user.displayName || user.email || 'usuario'}, ya se actualizó un partido.`,
-    `${match.homeTeam} ${match.resultHome}-${match.resultAway} ${match.awayTeam}`,
-    `Tu apuesta: ${bet.home}-${bet.away}`,
+    'El Prode Mundialista', '', `Hola ${user.displayName || user.email || 'usuario'}, ya se actualizó un partido.`, `${match.homeTeam} ${match.resultHome}-${match.resultAway} ${match.awayTeam}`,
+    match.winnerTeam ? `Clasificado / ganador de la llave: ${match.winnerTeam}` : '',
+    `Tu apuesta: ${bet.home}-${bet.away}${bet.winnerTeam ? ` · clasifica ${bet.winnerTeam}` : ''}`,
     `Puntos ganados: ${points}`,
-    `Regla aplicada en ${match.stage}: exacto=${exactValue}, signo=2, fallo con apuesta=1, sin jugar=0`,
+    `Regla aplicada en ${match.stage}: exacto=${exactValue}, signo/clasificado=2, fallo con apuesta=1, sin jugar=0`,
     `Posición actual: #${position}`,
     `Puntos totales: ${row?.points || 0}`,
-    '',
-    'Clasificación actual:',
+    '', 'Clasificación actual:',
     ...ranking.slice(0, 5).map((r, i) => `${i + 1}. ${r.name} · ${r.points} pts`),
     SITE_URL ? `Abrir app: ${SITE_URL}` : ''
-  ].join('\n');
+  ].filter(Boolean).join('
+');
 }
 
 function hasFinalResult(match) { return Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway); }
 function getOutcome(home, away) { return home > away ? 'home' : home < away ? 'away' : 'draw'; }
+function isKnockoutMatch(match) { return String(match?.stage || '') !== 'Fase de grupos'; }
+function getQualifiedTeam(match) {
+  if (!hasFinalResult(match)) return null;
+  if (match.winnerTeam) return match.winnerTeam;
+  if (match.resultHome > match.resultAway) return match.homeTeam;
+  if (match.resultAway > match.resultHome) return match.awayTeam;
+  return null;
+}
+function normalizeWinnerPickForBet(match, home, away, winnerTeam) {
+  if (!isKnockoutMatch(match)) return null;
+  if (home > away) return match.homeTeam;
+  if (home < away) return match.awayTeam;
+  return winnerTeam || null;
+}
+function isExactBet(bet, match) {
+  if (bet.home !== match.resultHome || bet.away !== match.resultAway) return false;
+  if (!isKnockoutMatch(match) || match.resultHome !== match.resultAway) return true;
+  return !!bet.winnerTeam && bet.winnerTeam === getQualifiedTeam(match);
+}
+function didBetHitSecondaryRule(bet, match) {
+  if (isKnockoutMatch(match)) return normalizeWinnerPickForBet(match, bet.home, bet.away, bet.winnerTeam) === getQualifiedTeam(match);
+  return getOutcome(bet.home, bet.away) === getOutcome(match.resultHome, match.resultAway);
+}
+function getNotificationKey(match) {
+  return `${match.resultHome}-${match.resultAway}|${match.winnerTeam || ''}`;
+}
 function hasConcreteTeam(name) { return !!name && !hasPlaceholderLike(name); }
 function hasPlaceholderLike(name) { return /^(1º|2º|Mejor 3º|Ganador|Perdedor|Por definir)/i.test(String(name || '')); }
 function getWinner(match) { if (!match || !hasFinalResult(match)) return null; if (match.resultHome > match.resultAway) return match.homeTeam; if (match.resultAway > match.resultHome) return match.awayTeam; return `${match.homeTeam} / ${match.awayTeam}`; }
@@ -429,6 +484,7 @@ function normalizeMatch(raw) {
     sortOrder: Number.isInteger(raw.sortOrder) ? raw.sortOrder : 999,
     resultHome: Number.isInteger(raw.resultHome) ? raw.resultHome : null,
     resultAway: Number.isInteger(raw.resultAway) ? raw.resultAway : null,
+    winnerTeam: raw.winnerTeam || null,
     status: raw.status || 'scheduled',
   };
 }
@@ -460,6 +516,17 @@ function normalizeGroupCode(value) {
 }
 
 function toNullableInt(value) { return Number.isInteger(value) ? Number(value) : null; }
+function resolveApiWinnerTeam(apiMatch, homeTeam, awayTeam, resultHome, resultAway, stage) {
+  const winnerCode = String(apiMatch?.score?.winner || '').toUpperCase();
+  if (winnerCode === 'HOME_TEAM') return homeTeam;
+  if (winnerCode === 'AWAY_TEAM') return awayTeam;
+  if (!isKnockoutMatch({ stage })) return null;
+  if (Number.isInteger(resultHome) && Number.isInteger(resultAway)) {
+    if (resultHome > resultAway) return homeTeam;
+    if (resultAway > resultHome) return awayTeam;
+  }
+  return null;
+}
 function mapApiStatus(apiStatus, home, away) { if (Number.isInteger(home) && Number.isInteger(away)) return 'played'; if (['IN_PLAY', 'PAUSED', 'LIVE'].includes(apiStatus)) return 'in_play'; return 'scheduled'; }
 function buildCompositeKey(homeTeam, awayTeam, kickoffAt) { return `${String(homeTeam || '').trim().toLowerCase()}__${String(awayTeam || '').trim().toLowerCase()}__${kickoffAt || ''}`; }
 function parseJsonEnv(name) { const raw = process.env[name]; return raw ? JSON.parse(raw) : null; }

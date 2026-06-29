@@ -1851,13 +1851,23 @@
       const home = parseScore(els.adminHomeScore.value);
       const away = parseScore(els.adminAwayScore.value);
       if (!matchId || home === null || away === null) { alert('Introduce ambos goles.'); return; }
+      const match = state.matches.find(item => item.id === matchId);
+      if (!match) return;
+      let winnerTeam = null;
+      if (isKnockoutMatch(match) && home === away) {
+        const answer = prompt(`Empataron ${home}-${away}. ¿Quién clasifica?
+1 = ${match.homeTeam}
+2 = ${match.awayTeam}`, '1');
+        winnerTeam = answer === '2' ? match.awayTeam : answer === '1' ? match.homeTeam : null;
+        if (!winnerTeam) { alert('Debes indicar quién clasifica en un empate de fase final.'); return; }
+      } else if (isKnockoutMatch(match)) {
+        winnerTeam = home > away ? match.homeTeam : match.awayTeam;
+      }
       if (state.previewMode) {
-        const match = state.matches.find(item => item.id === matchId);
-        if (!match) return;
-        match.resultHome = home; match.resultAway = away; match.status = 'played';
+        match.resultHome = home; match.resultAway = away; match.winnerTeam = winnerTeam; match.status = 'played';
         persistPreviewStore(); renderAll(); return;
       }
-      await state.db.collection('matches').doc(matchId).set({ resultHome: home, resultAway: away, status: 'played', updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      await state.db.collection('matches').doc(matchId).set({ resultHome: home, resultAway: away, winnerTeam: winnerTeam || null, status: 'played', updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
     }
 
     async function clearResultIfAdmin() {
@@ -1867,13 +1877,13 @@
       if (state.previewMode) {
         const match = state.matches.find(item => item.id === matchId);
         if (!match) return;
-        match.resultHome = null; match.resultAway = null; match.status = 'scheduled';
+        match.resultHome = null; match.resultAway = null; match.winnerTeam = null; match.status = 'scheduled';
         persistPreviewStore(); renderAll(); return;
       }
-      await state.db.collection('matches').doc(matchId).set({ resultHome: null, resultAway: null, status: 'scheduled', updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      await state.db.collection('matches').doc(matchId).set({ resultHome: null, resultAway: null, winnerTeam: null, status: 'scheduled', updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
     }
 
-    async function saveBet(matchId, homeValue, awayValue) {
+    async function saveBet(matchId, homeValue, awayValue, winnerValue) {
       const home = parseScore(homeValue);
       const away = parseScore(awayValue);
       if (!state.currentUser) { alert('Debes iniciar sesión con Google.'); return; }
@@ -1881,16 +1891,21 @@
       const match = state.matches.find(item => item.id === matchId);
       if (!match) return;
       if (isMatchStarted(match.kickoffAt)) { alert('Este partido ya empezó y el pronóstico está bloqueado.'); return; }
+      let winnerTeam = normalizeWinnerPickForBet(match, home, away, winnerValue);
+      if (isKnockoutMatch(match) && home === away && !winnerTeam) {
+        alert('En fases finales, si pronosticas empate debes marcar quién clasifica.');
+        return;
+      }
       if (state.previewMode) {
         const betId = `${state.currentUser.uid}_${matchId}`;
         const existing = state.previewStore.bets.find(bet => bet.id === betId);
-        if (existing) { existing.home = home; existing.away = away; }
-        else state.previewStore.bets.push({ id: betId, uid: state.currentUser.uid, matchId, home, away });
+        if (existing) { existing.home = home; existing.away = away; existing.winnerTeam = winnerTeam; }
+        else state.previewStore.bets.push({ id: betId, uid: state.currentUser.uid, matchId, home, away, winnerTeam });
         state.bets = state.previewStore.bets;
         persistPreviewStore(); renderAll(); return;
       }
       try {
-        await state.db.collection('bets').doc(`${state.currentUser.uid}_${matchId}`).set({ uid: state.currentUser.uid, matchId, home, away, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        await state.db.collection('bets').doc(`${state.currentUser.uid}_${matchId}`).set({ uid: state.currentUser.uid, matchId, home, away, winnerTeam: winnerTeam || null, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
         hideAuthError();
       } catch (error) {
         console.error('Error guardando pronóstico', error);
@@ -1971,9 +1986,10 @@
       matches.forEach((match) => {
         const homeInput = document.getElementById(`bet-home-${match.id}`);
         const awayInput = document.getElementById(`bet-away-${match.id}`);
+        const winnerInput = document.getElementById(`bet-winner-${match.id}`);
         const saveBtn = document.getElementById(`save-bet-${match.id}`);
         if (!homeInput || !awayInput || !saveBtn) return;
-        saveBtn.addEventListener('click', () => saveBet(match.id, homeInput.value, awayInput.value));
+        saveBtn.addEventListener('click', () => saveBet(match.id, homeInput.value, awayInput.value, winnerInput ? winnerInput.value : ''));
       });
     }
 
@@ -1983,9 +1999,15 @@
       const locked = isMatchStarted(match.kickoffAt);
       const points = hasResult && bet ? calculatePointsForBet(bet, match) : null;
       const exactValue = getExactPointsForStage(match.stage);
+      const knockout = isKnockoutMatch(match);
+      const qualifiedTeam = getQualifiedTeam(match);
+      const winnerInfo = knockout && qualifiedTeam ? `<span class="tag accent">➡️ Clasifica: ${escapeHtml(qualifiedTeam)}</span>` : '';
       const pointsBadge = hasResult && !bet ? '<span class="tag bad">➖ Sin apuesta: 0 puntos</span>' : points === null ? `<span class="tag">⭐ Exacto vale ${exactValue}</span>` : `<span class="tag ${points >= 2 ? 'good' : 'warn'}">⭐ ${points} ${points === 1 ? 'punto' : 'puntos'}</span>`;
       const resultBadge = hasResult ? `<span class="tag good">🏁 Resultado real: ${match.resultHome}-${match.resultAway}</span>` : `<span class="tag ${locked ? 'warn' : 'accent'}">${locked ? '⏳ Partido iniciado' : '📝 Pronóstico abierto'}</span>`;
       const lockBadge = locked ? `<span class="tag warn">🔒 Cerró ${formatDateTime(match.kickoffAt)}</span>` : `<span class="tag accent">🕒 Apuesta hasta ${formatDateTime(match.kickoffAt)}</span>`;
+      const winnerSelect = knockout ? `<div class="deadline-row"><select id="bet-winner-${match.id}" ${!state.currentUser || locked ? 'disabled' : ''}><option value="">Si empatan, ¿quién clasifica?</option><option value="${escapeHtml(match.homeTeam)}" ${bet?.winnerTeam === match.homeTeam ? 'selected' : ''}>${escapeHtml(match.homeTeam)}</option><option value="${escapeHtml(match.awayTeam)}" ${bet?.winnerTeam === match.awayTeam ? 'selected' : ''}>${escapeHtml(match.awayTeam)}</option></select></div>` : '';
+      const betSummary = bet ? `Tu apuesta: ${bet.home}-${bet.away}${knockout && bet.winnerTeam ? ` · clasifica ${escapeHtml(bet.winnerTeam)}` : ''}` : 'Todavía no apostaste este partido.';
+      const footerRule = knockout ? `Exacto ${exactValue}. Si hay empate, debes marcar quién clasifica; acertar sólo el clasificado suma 2.` : `Exacto ${exactValue} · signo 2 · fallo con apuesta 1.`;
       return `
         <article class="match-card">
           <div class="match-header"><span>${getStageBadgeText(match)} · ${formatDateTime(match.kickoffAt)}</span><span>${escapeHtml(match.venue || 'Por definir')}</span></div>
@@ -1994,8 +2016,9 @@
             <div class="score-box"><input id="bet-home-${match.id}" type="number" min="0" value="${bet ? bet.home : ''}" ${!state.currentUser || locked ? 'disabled' : ''} /><span class="score-sep">-</span><input id="bet-away-${match.id}" type="number" min="0" value="${bet ? bet.away : ''}" ${!state.currentUser || locked ? 'disabled' : ''} /></div>
             <div class="team right"><div><div class="team-name">${escapeHtml(match.awayTeam)}</div><div class="team-meta">${match.stage === 'Fase de grupos' ? `Grupo ${escapeHtml(match.group)}` : escapeHtml(match.stage)}</div></div>${renderFlag(match.awayTeam)}</div>
           </div>
-          <div class="deadline-row">${lockBadge}${resultBadge}${pointsBadge}</div>
-          <div class="match-footer"><div class="small">${bet ? `Tu apuesta: ${bet.home}-${bet.away}` : 'Todavía no apostaste este partido.'} Exacto ${exactValue} · signo 2 · fallo con apuesta 1.</div><button id="save-bet-${match.id}" class="${locked || !state.currentUser ? 'btn-secondary' : 'btn-primary'}" ${locked || !state.currentUser ? 'disabled' : ''}>Guardar pronóstico</button></div>
+          ${winnerSelect}
+          <div class="deadline-row">${lockBadge}${resultBadge}${winnerInfo}${pointsBadge}</div>
+          <div class="match-footer"><div class="small">${betSummary} ${footerRule}</div><button id="save-bet-${match.id}" class="${locked || !state.currentUser ? 'btn-secondary' : 'btn-primary'}" ${locked || !state.currentUser ? 'disabled' : ''}>Guardar pronóstico</button></div>
         </article>`;
     }
 
@@ -2029,7 +2052,8 @@
 
     function renderFixtureRow(match, includeResults) {
       const hasResult = Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway);
-      const rightSide = includeResults ? (hasResult ? `<span class="tag good">Resultado: ${match.resultHome}-${match.resultAway}</span>` : `<span class="tag warn">${match.status === 'in_play' ? 'En juego' : 'Sin resultado'}</span>`) : `<div class="small">${formatTime(match.kickoffAt)} · ${escapeHtml(match.stage)}</div>`;
+      const qualifiedTeam = getQualifiedTeam(match);
+      const rightSide = includeResults ? (hasResult ? `<div><span class="tag good">Resultado: ${match.resultHome}-${match.resultAway}</span>${qualifiedTeam ? `<span class="tag accent" style="margin-left:6px">Clasifica: ${escapeHtml(qualifiedTeam)}</span>` : ''}</div>` : `<span class="tag warn">${match.status === 'in_play' ? 'En juego' : 'Sin resultado'}</span>`) : `<div class="small">${formatTime(match.kickoffAt)} · ${escapeHtml(match.stage)}</div>`;
       return `<div class="fixture-row"><div><div class="inline-flag-pair">${renderMiniFlag(match.homeTeam)} ${escapeHtml(match.homeTeam)} vs ${renderMiniFlag(match.awayTeam)} ${escapeHtml(match.awayTeam)}</div><div class="small">${getStageBadgeText(match)} · ${escapeHtml(match.venue || 'Por definir')}</div></div><div>${rightSide}</div></div>`;
     }
 
@@ -2039,7 +2063,7 @@
         const stageMatches = getKnockoutMatchesByStage(stageName);
         const fallback = KNOCKOUT_BLUEPRINT.filter(match => match.stage === stageName).map(match => normalizeMatch({ ...match, homeTeam: match.slotHome, awayTeam: match.slotAway }));
         const matches = stageMatches.length ? stageMatches : fallback;
-        return `<div class="bracket-column"><div class="bracket-round-title"><span>${escapeHtml(stageName)}</span><small>Exacto ${getExactPointsForStage(stageName)} puntos</small></div>${matches.map(match => `<div class="bracket-match ${match.final ? 'final' : ''}"><div class="bracket-match-header"><span>${escapeHtml(match.id)}</span><span>${formatDateChip(match.dateKey)}</span></div><div class="bracket-team">${escapeHtml(match.homeTeam || match.slotHome || 'Por definir')}</div><div class="bracket-team">${escapeHtml(match.awayTeam || match.slotAway || 'Por definir')}</div>${Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway) ? `<div class="bracket-note">Resultado: ${match.resultHome}-${match.resultAway}</div>` : ''}</div>`).join('')}</div>`;
+        return `<div class="bracket-column"><div class="bracket-round-title"><span>${escapeHtml(stageName)}</span><small>Exacto ${getExactPointsForStage(stageName)} puntos</small></div>${matches.map(match => `<div class="bracket-match ${match.final ? 'final' : ''}"><div class="bracket-match-header"><span>${escapeHtml(match.id)}</span><span>${formatDateChip(match.dateKey)}</span></div><div class="bracket-team">${escapeHtml(match.homeTeam || match.slotHome || 'Por definir')}</div><div class="bracket-team">${escapeHtml(match.awayTeam || match.slotAway || 'Por definir')}</div>${Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway) ? `<div class="bracket-note">Resultado: ${match.resultHome}-${match.resultAway}${getQualifiedTeam(match) ? ` · Clasifica: ${escapeHtml(getQualifiedTeam(match))}` : ''}</div>` : ''}</div>`).join('')}</div>`;
       });
       els.knockoutBracketWrap.innerHTML = `<div class="bracket-wrap"><div class="bracket-grid">${columns.join('')}</div></div><div class="bracket-note">El cuadro final se alimenta desde Firestore. El proceso horario va completando equipos y resultados automáticamente ronda a ronda.</div>`;
     }
@@ -2083,12 +2107,40 @@
     function getRankingRow(uid) { return buildRanking().find((row) => (row.uid || row.id) === uid) || null; }
     function getCurrentUserBet(matchId) { if (!state.currentUser) return null; return state.bets.find(bet => bet.uid === state.currentUser.uid && bet.matchId === matchId) || null; }
     function calculateUserPoints(uid) { return state.bets.filter(bet => bet.uid === uid).reduce((total, bet) => { const match = state.matches.find(item => item.id === bet.matchId); if (!match || !Number.isInteger(match.resultHome) || !Number.isInteger(match.resultAway)) return total; return total + calculatePointsForBet(bet, match); }, 0); }
-    function countExactHits(uid) { return state.bets.filter(bet => bet.uid === uid).reduce((count, bet) => { const match = state.matches.find(item => item.id === bet.matchId); if (!match || !Number.isInteger(match.resultHome) || !Number.isInteger(match.resultAway)) return count; return bet.home === match.resultHome && bet.away === match.resultAway ? count + 1 : count; }, 0); }
-    function countOutcomeHits(uid) { return state.bets.filter(bet => bet.uid === uid).reduce((count, bet) => { const match = state.matches.find(item => item.id === bet.matchId); if (!match || !Number.isInteger(match.resultHome) || !Number.isInteger(match.resultAway)) return count; return getOutcome(bet.home, bet.away) === getOutcome(match.resultHome, match.resultAway) ? count + 1 : count; }, 0); }
+    function countExactHits(uid) { return state.bets.filter(bet => bet.uid === uid).reduce((count, bet) => { const match = state.matches.find(item => item.id === bet.matchId); if (!match || !Number.isInteger(match.resultHome) || !Number.isInteger(match.resultAway)) return count; return isExactBet(bet, match) ? count + 1 : count; }, 0); }
+    function countOutcomeHits(uid) { return state.bets.filter(bet => bet.uid === uid).reduce((count, bet) => { const match = state.matches.find(item => item.id === bet.matchId); if (!match || !Number.isInteger(match.resultHome) || !Number.isInteger(match.resultAway)) return count; return didBetHitSecondaryRule(bet, match) ? count + 1 : count; }, 0); }
     function countUserBets(uid) { return state.bets.filter(bet => bet.uid === uid).length; }
-    function calculatePointsForBet(bet, match) { if (!Number.isInteger(match.resultHome) || !Number.isInteger(match.resultAway)) return 0; if (bet.home === match.resultHome && bet.away === match.resultAway) return getExactPointsForStage(match.stage); if (getOutcome(bet.home, bet.away) === getOutcome(match.resultHome, match.resultAway)) return 2; return 1; }
+    function calculatePointsForBet(bet, match) {
+      if (!Number.isInteger(match.resultHome) || !Number.isInteger(match.resultAway)) return 0;
+      if (isExactBet(bet, match)) return getExactPointsForStage(match.stage);
+      if (didBetHitSecondaryRule(bet, match)) return 2;
+      return 1;
+    }
     function getExactPointsForStage(stage) { return STAGE_META[stage]?.exactPoints || 4; }
     function getOutcome(home, away) { return home > away ? 'home' : home < away ? 'away' : 'draw'; }
+    function isKnockoutMatch(match) { return String(match?.stage || '') !== 'Fase de grupos'; }
+    function getQualifiedTeam(match) {
+      if (!match || !Number.isInteger(match.resultHome) || !Number.isInteger(match.resultAway)) return null;
+      if (match.winnerTeam) return match.winnerTeam;
+      if (match.resultHome > match.resultAway) return match.homeTeam;
+      if (match.resultAway > match.resultHome) return match.awayTeam;
+      return null;
+    }
+    function normalizeWinnerPickForBet(match, home, away, winnerValue) {
+      if (!isKnockoutMatch(match)) return null;
+      if (home > away) return match.homeTeam;
+      if (home < away) return match.awayTeam;
+      return winnerValue || null;
+    }
+    function isExactBet(bet, match) {
+      if (bet.home !== match.resultHome || bet.away !== match.resultAway) return false;
+      if (!isKnockoutMatch(match) || match.resultHome !== match.resultAway) return true;
+      return !!bet.winnerTeam && bet.winnerTeam === getQualifiedTeam(match);
+    }
+    function didBetHitSecondaryRule(bet, match) {
+      if (isKnockoutMatch(match)) return normalizeWinnerPickForBet(match, bet.home, bet.away, bet.winnerTeam) === getQualifiedTeam(match);
+      return getOutcome(bet.home, bet.away) === getOutcome(match.resultHome, match.resultAway);
+    }
     function getUpcomingMatch() { return getSortedMatches().find(match => !isMatchStarted(match.kickoffAt)) || null; }
     function getNextUpcomingDateKey() { return getUpcomingMatch()?.dateKey || null; }
     function getDateEntries() { const map = new Map(); getSortedMatches().forEach((match) => { if (!map.has(match.dateKey)) map.set(match.dateKey, match.kickoffAtMs); }); return [...map.entries()].sort((a, b) => a[1] - b[1]).map(([dateKey]) => ({ dateKey })); }
@@ -2124,6 +2176,7 @@
         sortOrder: Number.isInteger(raw.sortOrder) ? raw.sortOrder : 999,
         resultHome: Number.isInteger(raw.resultHome) ? raw.resultHome : null,
         resultAway: Number.isInteger(raw.resultAway) ? raw.resultAway : null,
+        winnerTeam: raw.winnerTeam || null,
         status: raw.status || 'scheduled',
         final: !!raw.final
       };
@@ -2136,7 +2189,7 @@
     }
 
     function seedPayload(match) {
-      return { id: match.id, stage: match.stage, stageOrder: match.stageOrder, group: match.group || '', dateKey: match.dateKey, kickoffAt: match.kickoffAt, kickoffAtMs: match.kickoffAtMs || Date.parse(match.kickoffAt), venue: match.venue || 'Por definir', homeTeam: match.homeTeam, awayTeam: match.awayTeam, slotHome: match.slotHome || null, slotAway: match.slotAway || null, sortOrder: match.sortOrder || 999, final: !!match.final, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+      return { id: match.id, stage: match.stage, stageOrder: match.stageOrder, group: match.group || '', dateKey: match.dateKey, kickoffAt: match.kickoffAt, kickoffAtMs: match.kickoffAtMs || Date.parse(match.kickoffAt), venue: match.venue || 'Por definir', homeTeam: match.homeTeam, awayTeam: match.awayTeam, slotHome: match.slotHome || null, slotAway: match.slotAway || null, winnerTeam: match.winnerTeam || null, sortOrder: match.sortOrder || 999, final: !!match.final, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
     }
 
     function parseScore(value) { if (value === '' || value === null || value === undefined) return null; const num = Number(value); return Number.isInteger(num) && num >= 0 ? num : null; }
