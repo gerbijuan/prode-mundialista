@@ -111,30 +111,8 @@ async function main() {
 
 async function upsertSeedMatches(db, seedMatches) {
   const batch = db.batch();
-  seedMatches.forEach((match) => {
-    const seed = buildSeedUpsert(match);
-    batch.set(db.collection('matches').doc(match.id), { ...seed, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-  });
+  seedMatches.forEach((match) => batch.set(db.collection('matches').doc(match.id), { ...match, updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
   await batch.commit();
-}
-
-function buildSeedUpsert(match) {
-  return {
-    id: match.id,
-    stage: match.stage,
-    stageOrder: match.stageOrder,
-    group: match.group || '',
-    homeTeam: match.homeTeam,
-    awayTeam: match.awayTeam,
-    slotHome: match.slotHome || null,
-    slotAway: match.slotAway || null,
-    kickoffAt: match.kickoffAt,
-    kickoffAtMs: match.kickoffAtMs,
-    dateKey: match.dateKey,
-    venue: match.venue || 'Por definir',
-    sortOrder: match.sortOrder,
-    final: !!match.final,
-  };
 }
 
 function normalizeGroupSeeds(seed) {
@@ -427,8 +405,7 @@ function buildEmailText({ user, match, bet, points, row, position, ranking }) {
     '', 'Clasificación actual:',
     ...ranking.slice(0, 5).map((r, i) => `${i + 1}. ${r.name} · ${r.points} pts`),
     SITE_URL ? `Abrir app: ${SITE_URL}` : ''
-  ].filter(Boolean).join('
-');
+  ].filter(Boolean).join('\n');
 }
 
 function hasFinalResult(match) { return Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway); }
