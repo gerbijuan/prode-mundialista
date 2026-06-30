@@ -2024,7 +2024,7 @@
 
     function renderStandings() {
       const rows = buildRanking();
-      els.standingsWrap.innerHTML = rows.length ? `<table class="standings-table"><thead><tr><th>#</th><th>Usuario</th><th>Puntos</th><th>Exactos</th><th>Aciertos</th><th>Pronósticos</th></tr></thead><tbody>${rows.map((row, index) => `<tr class="${state.currentUser?.uid && (row.uid || row.id) === state.currentUser.uid ? 'highlight' : ''}"><td>${index + 1}</td><td>${escapeHtml(row.name)}</td><td><strong>${row.points}</strong></td><td>${row.exact}</td><td>${row.outcomes}</td><td>${row.bets}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">Todavía no hay usuarios. Inicien sesión y arranca la competencia familiar.</div>';
+      els.standingsWrap.innerHTML = rows.length ? `<table class="standings-table"><thead><tr><th>#</th><th>Usuario</th><th>Puntos</th><th>Exactos</th><th>Aciertos</th><th>Pronósticos</th></tr></thead><tbody>${rows.map((row, index) => `<tr class="${state.currentUser?.uid && (row.uid || row.id || row.userId) === state.currentUser.uid ? 'highlight' : ''}"><td>${index + 1}</td><td>${escapeHtml(row.name)}</td><td><strong>${safeNumber(row.points)}</strong></td><td>${safeNumber(row.exact)}</td><td>${safeNumber(row.outcomes)}</td><td>${safeNumber(row.bets)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">Todavía no hay usuarios. Inicien sesión y arranca la competencia familiar.</div>';
     }
 
     function renderNextRound() {
@@ -2096,12 +2096,58 @@
       els.adminAwayScore.value = match && Number.isInteger(match.resultAway) ? match.resultAway : '';
     }
 
+    function safeNumber(value, fallback = 0) {
+      const number = Number(value);
+      return Number.isFinite(number) ? number : fallback;
+    }
+
+    function firstDefinedNumber(row, keys, fallback = 0) {
+      for (const key of keys) {
+        if (row && row[key] !== undefined && row[key] !== null && row[key] !== '') {
+          const number = Number(row[key]);
+          if (Number.isFinite(number)) return number;
+        }
+      }
+      return fallback;
+    }
+
+    function normalizeRankingRow(row) {
+      const uid = row.uid || row.id || row.userId || row.userID || '';
+      const exact = firstDefinedNumber(row, ['exact', 'exactos', 'exacts', 'exactCount', 'exactMatches', 'exactHits', 'correctExact', 'exactPredictions', 'exactosCount']);
+      const outcomes = firstDefinedNumber(row, ['outcomes', 'aciertos', 'secondaries', 'secondaryHits', 'hitCount', 'hits', 'correctSigns', 'signHits', 'outcomeHits', 'aciertosCount']);
+      const bets = firstDefinedNumber(row, ['bets', 'pronosticos', 'played', 'predictions', 'totalPredictions', 'totalBets', 'betCount', 'betsCount', 'playedMatches', 'pronosticosCount']);
+      return {
+        ...row,
+        id: uid,
+        uid,
+        name: row.name || row.displayName || row.email || 'Usuario',
+        points: firstDefinedNumber(row, ['points', 'puntos'], 0),
+        exact,
+        exactos: exact,
+        exacts: exact,
+        outcomes,
+        aciertos: outcomes,
+        secondaries: outcomes,
+        bets,
+        pronosticos: bets,
+        played: bets
+      };
+    }
+
+    function sortRankingRows(rows) {
+      return [...rows]
+        .map(normalizeRankingRow)
+        .sort((a, b) => b.points - a.points || b.exact - a.exact || b.outcomes - a.outcomes || a.name.localeCompare(b.name, 'es'));
+    }
+
     function buildRanking() {
-      if (!state.previewMode && Array.isArray(state.ranking) && state.ranking.length) return [...state.ranking].sort((a, b) => b.points - a.points || b.exact - a.exact || b.outcomes - a.outcomes || a.name.localeCompare(b.name, 'es'));
-      return state.users.map((user) => {
+      if (!state.previewMode && Array.isArray(state.ranking) && state.ranking.length) {
+        return sortRankingRows(state.ranking);
+      }
+      return sortRankingRows(state.users.map((user) => {
         const uid = user.uid || user.id;
         return { id: uid, uid, name: user.displayName || user.email || 'Usuario', points: calculateUserPoints(uid), exact: countExactHits(uid), outcomes: countOutcomeHits(uid), bets: countUserBets(uid) };
-      }).sort((a, b) => b.points - a.points || b.exact - a.exact || b.outcomes - a.outcomes || a.name.localeCompare(b.name, 'es'));
+      }));
     }
 
     function getRankingRow(uid) { return buildRanking().find((row) => (row.uid || row.id) === uid) || null; }
@@ -2138,8 +2184,13 @@
       return !!bet.winnerTeam && bet.winnerTeam === getQualifiedTeam(match);
     }
     function didBetHitSecondaryRule(bet, match) {
-      if (isKnockoutMatch(match)) return normalizeWinnerPickForBet(match, bet.home, bet.away, bet.winnerTeam) === getQualifiedTeam(match);
-      return getOutcome(bet.home, bet.away) === getOutcome(match.resultHome, match.resultAway);
+      const realOutcome = getOutcome(match.resultHome, match.resultAway);
+      const betOutcome = getOutcome(bet.home, bet.away);
+      if (realOutcome !== betOutcome) return false;
+      // En eliminatorias, si el resultado real fue empate y la apuesta también fue empate,
+      // cuenta como acierto de signo aunque no se haya marcado quién pasa.
+      // El clasificado no debe convertir un empate acertado en fallo.
+      return true;
     }
     function getUpcomingMatch() { return getSortedMatches().find(match => !isMatchStarted(match.kickoffAt)) || null; }
     function getNextUpcomingDateKey() { return getUpcomingMatch()?.dateKey || null; }
