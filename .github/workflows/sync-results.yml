@@ -1,30 +1,62 @@
-name: Sync World Cup Results
+name: Recalculate Prode Ranking
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '17 * * * *'
+    inputs:
+      write_detail:
+        description: "Generar detalle JSON en reports/"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prode-ranking-recalculate
+  cancel-in-progress: true
 
 jobs:
-  sync:
+  recalculate-ranking:
+    name: Recalculate ranking only
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+          npm install firebase-admin
 
-      - name: Run result sync
+      - name: Recalculate ranking from Firestore only
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
-          FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
-          APPS_SCRIPT_WEBAPP_URL: ${{ secrets.APPS_SCRIPT_WEBAPP_URL }}
-          APPS_SCRIPT_SHARED_TOKEN: ${{ secrets.APPS_SCRIPT_SHARED_TOKEN }}
-          SITE_URL: ${{ secrets.SITE_URL }}
-        run: npm run sync:results
+        run: |
+          if [ "${{ github.event.inputs.write_detail }}" = "true" ]; then
+            node scripts/sync-results.mjs --apply --write-detail
+          else
+            node scripts/sync-results.mjs --apply
+          fi
+
+      - name: Upload detail report
+        if: ${{ github.event.inputs.write_detail == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ranking-detail-safe-recalculate
+          path: reports/ranking-detail-safe-recalculate.json
+          if-no-files-found: ignore

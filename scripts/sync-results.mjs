@@ -1,590 +1,401 @@
-import { readFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { cert, initializeApp } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import admin from 'firebase-admin';
+import fs from 'node:fs';
+import path from 'node:path';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const root = resolve(__dirname, '..');
-const fixturePath = resolve(root, 'public/data/fixture-2026.json');
-const bracketPath = resolve(root, 'public/data/bracket-2026.json');
-const FOOTBALL_DATA_BASE = 'https://api.football-data.org/v4';
-const COMPETITION_CODE = 'WC';
-const SITE_URL = process.env.SITE_URL || '';
-const APPS_SCRIPT_WEBAPP_URL = process.env.APPS_SCRIPT_WEBAPP_URL || '';
-const APPS_SCRIPT_SHARED_TOKEN = process.env.APPS_SCRIPT_SHARED_TOKEN || '';
+const args = process.argv.slice(2);
+const APPLY = args.includes('--apply');
+const WRITE_DETAIL = args.includes('--write-detail');
 
-const STAGE_META = {
-  'Fase de grupos': { stageOrder: 1, exactPoints: 4 },
-  'Dieciseisavos': { stageOrder: 2, exactPoints: 5, apiAliases: ['LAST_32', 'ROUND_OF_32', 'PLAYOFFS', 'PRELIMINARY_FINAL'] },
-  'Octavos': { stageOrder: 3, exactPoints: 6, apiAliases: ['LAST_16', 'ROUND_OF_16'] },
-  'Cuartos': { stageOrder: 4, exactPoints: 7, apiAliases: ['QUARTER_FINALS', 'QUARTER_FINAL'] },
-  'Semifinales': { stageOrder: 5, exactPoints: 8, apiAliases: ['SEMI_FINALS', 'SEMI_FINAL'] },
-  '3º puesto': { stageOrder: 6, exactPoints: 8, apiAliases: ['THIRD_PLACE'] },
-  'Final': { stageOrder: 7, exactPoints: 9, apiAliases: ['FINAL'] },
-};
+function parseJsonEnv(name) {
+  const value = process.env[name];
+  if (!value) throw new Error(`Falta la variable ${name}`);
+  try {
+    return JSON.parse(value);
+  } catch {
+    throw new Error(`La variable ${name} no contiene un JSON válido`);
+  }
+}
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+function norm(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/&/g, ' y ')
+    .replace(/\./g, '')
+    .replace(/países bajos/gi, 'paises bajos')
+    .replace(/netherlands/gi, 'paises bajos')
+    .replace(/south africa/gi, 'sudafrica')
+    .replace(/czechia/gi, 'chequia')
+    .replace(/czech republic/gi, 'chequia')
+    .replace(/bosnia and herzegovina/gi, 'bosnia y herzegovina')
+    .replace(/dr congo/gi, 'rd congo')
+    .replace(/congo dr/gi, 'rd congo')
+    .replace(/morocco/gi, 'marruecos')
+    .replace(/japan/gi, 'japon')
+    .replace(/brazil/gi, 'brasil')
+    .replace(/germany/gi, 'alemania')
+    .replace(/paraguay/gi, 'paraguay')
+    .replace(/canada/gi, 'canada')
+    .replace(/[^a-z0-9\s]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function numberFrom(...values) {
+  for (const value of values) {
+    if (value === null || value === undefined || value === '') continue;
+    const n = Number(value);
+    if (Number.isInteger(n)) return n;
+  }
+  return null;
+}
+
+function matchResult(match) {
+  const resultHome = numberFrom(match.resultHome, match.homeResult, match.homeGoals, match.scoreHome);
+  const resultAway = numberFrom(match.resultAway, match.awayResult, match.awayGoals, match.scoreAway);
+
+  if (!Number.isInteger(resultHome) || !Number.isInteger(resultAway)) return null;
+
+  return { resultHome, resultAway };
+}
+
+function hasResult(match) {
+  return Boolean(matchResult(match));
+}
+
+function getMs(match) {
+  if (typeof match.kickoffAtMs === 'number') return match.kickoffAtMs;
+
+  if (match.kickoffAt) {
+    const ms = Date.parse(match.kickoffAt);
+    if (!Number.isNaN(ms)) return ms;
+  }
+
+  if (match.dateKey) {
+    const ms = Date.parse(`${match.dateKey}T12:00:00Z`);
+    if (!Number.isNaN(ms)) return ms;
+  }
+
+  return 0;
+}
+
+function getBetScores(bet) {
+  return {
+    home: numberFrom(
+      bet.home,
+      bet.homeScore,
+      bet.scoreHome,
+      bet.predHome,
+      bet.predictionHome,
+      bet.resultHome,
+      bet.homeGoals,
+      bet.goalsHome,
+      bet.local,
+      bet.h
+    ),
+    away: numberFrom(
+      bet.away,
+      bet.awayScore,
+      bet.scoreAway,
+      bet.predAway,
+      bet.predictionAway,
+      bet.resultAway,
+      bet.awayGoals,
+      bet.goalsAway,
+      bet.visitante,
+      bet.a
+    ),
+  };
+}
+
+function stageExactValue(stage) {
+  const values = {
+    'Fase de grupos': 4,
+    'Dieciseisavos': 5,
+    'Octavos': 6,
+    'Cuartos': 7,
+    'Semifinales': 8,
+    '3º puesto': 8,
+    'Tercer puesto': 8,
+    'Final': 9,
+  };
+
+  return values[stage] || 4;
+}
+
+function computePoints(match, bet) {
+  const real = matchResult(match);
+  if (!real) return null;
+
+  const predicted = getBetScores(bet);
+  if (!Number.isInteger(predicted.home) || !Number.isInteger(predicted.away)) {
+    return null;
+  }
+
+  const exact = predicted.home === real.resultHome && predicted.away === real.resultAway;
+
+  if (exact) {
+    return {
+      points: stageExactValue(match.stage),
+      exact: true,
+      secondary: false,
+      label: 'exacto',
+      betHome: predicted.home,
+      betAway: predicted.away,
+      resultHome: real.resultHome,
+      resultAway: real.resultAway,
+    };
+  }
+
+  const realSign = Math.sign(real.resultHome - real.resultAway);
+  const betSign = Math.sign(predicted.home - predicted.away);
+
+  // Regla segura:
+  // - Acierta ganador o empate => 2 puntos.
+  // - En eliminatorias, empate real 1-1 y apuesta 2-2 => +2.
+  // - No se exige clasificado para no convertir un empate acertado en fallo.
+  if (realSign === betSign) {
+    return {
+      points: 2,
+      exact: false,
+      secondary: true,
+      label: 'signo/acierto',
+      betHome: predicted.home,
+      betAway: predicted.away,
+      resultHome: real.resultHome,
+      resultAway: real.resultAway,
+    };
+  }
+
+  return {
+    points: 1,
+    exact: false,
+    secondary: false,
+    label: 'fallo con apuesta',
+    betHome: predicted.home,
+    betAway: predicted.away,
+    resultHome: real.resultHome,
+    resultAway: real.resultAway,
+  };
+}
+
+function guessMatchId(docId, bet, matchIds) {
+  const direct = bet.matchId || bet.matchRef || bet.match_id || bet.idPartido || bet.partidoId;
+
+  if (direct && matchIds.has(String(direct))) return String(direct);
+  if (bet.match && matchIds.has(String(bet.match))) return String(bet.match);
+
+  for (const id of matchIds) {
+    if (docId === id || docId.includes(id)) return id;
+  }
+
+  return direct ? String(direct) : null;
+}
+
+function guessUserId(docId, bet, userIds) {
+  const direct = bet.userId || bet.uid || bet.userRef || bet.idUsuario || bet.usuarioId;
+
+  if (direct && userIds.has(String(direct))) return String(direct);
+
+  for (const id of userIds) {
+    if (docId === id || docId.includes(id)) return id;
+  }
+
+  return direct ? String(direct) : null;
+}
 
 async function main() {
   const serviceAccount = parseJsonEnv('FIREBASE_SERVICE_ACCOUNT_JSON');
-  const apiKey = process.env.FOOTBALL_DATA_API_KEY;
-  if (!serviceAccount) throw new Error('Falta FIREBASE_SERVICE_ACCOUNT_JSON');
-  if (!apiKey) throw new Error('Falta FOOTBALL_DATA_API_KEY');
 
-  initializeApp({ credential: cert(serviceAccount) });
-  const db = getFirestore();
-
-  const [fixtureSeed, bracketSeed, matchesApi, standingsApi] = await Promise.all([
-    readJsonFile(fixturePath),
-    readJsonFile(bracketPath),
-    fetchJson(`${FOOTBALL_DATA_BASE}/competitions/${COMPETITION_CODE}/matches`, apiKey),
-    fetchJson(`${FOOTBALL_DATA_BASE}/competitions/${COMPETITION_CODE}/standings`, apiKey).catch(() => ({ standings: [] })),
-  ]);
-
-  const seedMatches = [...normalizeGroupSeeds(fixtureSeed), ...normalizeKnockoutSeeds(bracketSeed)];
-  await upsertSeedMatches(db, seedMatches);
-
-  const [matchesSnap, betsSnap, usersSnap] = await Promise.all([
-    db.collection('matches').get(),
-    db.collection('bets').get(),
-    db.collection('users').get(),
-  ]);
-
-  let currentMatches = matchesSnap.docs.map((doc) => normalizeMatch({ id: doc.id, ...doc.data() }));
-  const bets = betsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-  const users = usersSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-
-  const syncResult = await syncMatchesFromApi(db, currentMatches, matchesApi.matches || []);
-  currentMatches = syncResult.updatedMatches;
-  currentMatches = await restoreResultsFromNotifications(db, currentMatches);
-
-  const standings = normalizeStandings(standingsApi.standings || []);
-  const { groupSlots, bestThirds } = buildGroupSlots(standings);
-  const resolutionResult = await resolveKnockoutMatches(db, currentMatches, groupSlots, bestThirds);
-  currentMatches = resolutionResult.matches;
-
-  const ranking = buildRanking(currentMatches, bets, users);
-  await Promise.all([
-    db.collection('ranking').doc('current').set({ rows: ranking, updatedAt: FieldValue.serverTimestamp() }, { merge: true }),
-    db.collection('tournament').doc('groups').set({ standings, updatedAt: FieldValue.serverTimestamp() }, { merge: true }),
-    db.collection('tournament').doc('knockout').set({ bracket: buildBracketPayload(currentMatches), updatedAt: FieldValue.serverTimestamp() }, { merge: true }),
-  ]);
-
-  const matchesToNotify = currentMatches.filter((match) => hasFinalResult(match) && getNotificationKey(match) !== match.lastNotifiedResult);
-
-  if (!APPS_SCRIPT_WEBAPP_URL || !APPS_SCRIPT_SHARED_TOKEN) {
-    console.log(`Sync completa. Cambios detectados por API: ${syncResult.changedMatches.length}. Partidos revisados para aviso: ${matchesToNotify.length}`);
-    return;
-  }
-
-  const usersByUid = new Map(users.map((u) => [u.uid || u.id, u]));
-  for (const match of matchesToNotify) {
-    const matchBets = bets.filter((bet) => bet.matchId === match.id);
-    if (!matchBets.length) {
-      await markNotified(db, match);
-      continue;
-    }
-    const notifications = [];
-    for (const bet of matchBets) {
-      const user = usersByUid.get(bet.uid);
-      if (!user?.email) continue;
-      const row = ranking.find((r) => r.uid === bet.uid);
-      const position = ranking.findIndex((r) => r.uid === bet.uid) + 1;
-      const points = calculatePointsForBet(bet, match);
-      notifications.push({
-        to: user.email,
-        subject: `Actualización del Prode Mundialista · ${match.homeTeam} ${match.resultHome}-${match.resultAway} ${match.awayTeam}`,
-        text: buildEmailText({ user, match, bet, points, row, position, ranking }),
-        html: buildEmailHtml({ user, match, bet, points, row, position, ranking }),
-        name: 'El Prode Mundialista',
-      });
-    }
-    if (notifications.length) await sendViaAppsScript({ notifications });
-    await markNotified(db, match);
-  }
-
-  console.log(`Sync completa. Cambios detectados por API: ${syncResult.changedMatches.length}. Partidos revisados para aviso: ${matchesToNotify.length}`);
-}
-
-async function upsertSeedMatches(db, seedMatches) {
-  const batch = db.batch();
-  seedMatches.forEach((match) => {
-    const payload = {
-      stage: match.stage,
-      stageOrder: match.stageOrder,
-      group: match.group || '',
-      slotHome: match.slotHome || null,
-      slotAway: match.slotAway || null,
-      kickoffAt: match.kickoffAt,
-      kickoffAtMs: match.kickoffAtMs,
-      dateKey: match.dateKey,
-      venue: match.venue || 'Por definir',
-      sortOrder: match.sortOrder,
-      final: !!match.final,
-      updatedAt: FieldValue.serverTimestamp(),
-    };
-    if (match.stage === 'Fase de grupos') {
-      payload.homeTeam = match.homeTeam;
-      payload.awayTeam = match.awayTeam;
-    } else {
-      if (hasConcreteTeam(match.homeTeam) && !hasPlaceholderLike(match.homeTeam)) payload.homeTeam = match.homeTeam;
-      if (hasConcreteTeam(match.awayTeam) && !hasPlaceholderLike(match.awayTeam)) payload.awayTeam = match.awayTeam;
-    }
-    batch.set(db.collection('matches').doc(match.id), payload, { merge: true });
-  });
-  await batch.commit();
-}
-
-function normalizeGroupSeeds(seed) {
-  return seed.map((match) => normalizeMatch({ ...match, stage: 'Fase de grupos', stageOrder: 1, kickoffAtMs: Date.parse(match.kickoffAt) }));
-}
-
-function normalizeKnockoutSeeds(seed) {
-  return seed.map((match) => normalizeMatch({ ...match, homeTeam: match.slotHome, awayTeam: match.slotAway, kickoffAtMs: Date.parse(match.kickoffAt) }));
-}
-
-async function syncMatchesFromApi(db, currentMatches, apiMatches) {
-  const updatedMatches = currentMatches.map((match) => ({ ...match }));
-  const updatedIndex = new Map(updatedMatches.map((match) => [match.id, match]));
-  const changedMatches = [];
-  const batch = db.batch();
-  let writes = 0;
-
-  const byExternal = new Map();
-  const groupByComposite = new Map();
-  const knockoutByStage = new Map();
-
-  currentMatches.forEach((match) => {
-    if (Number.isInteger(match.externalMatchId)) byExternal.set(match.externalMatchId, match);
-    if (match.stage === 'Fase de grupos') groupByComposite.set(buildCompositeKey(match.homeTeam, match.awayTeam, match.kickoffAt), match);
-    else {
-      if (!knockoutByStage.has(match.stage)) knockoutByStage.set(match.stage, []);
-      knockoutByStage.get(match.stage).push(match);
-    }
-  });
-  knockoutByStage.forEach((list) => list.sort((a, b) => a.sortOrder - b.sortOrder));
-
-  const groupedApiKnockout = new Map();
-  for (const apiMatch of apiMatches) {
-    const stage = normalizeApiStage(apiMatch.stage);
-    if (!stage || stage === 'Fase de grupos') continue;
-    if (!groupedApiKnockout.has(stage)) groupedApiKnockout.set(stage, []);
-    groupedApiKnockout.get(stage).push(apiMatch);
-  }
-  groupedApiKnockout.forEach((list) => list.sort((a, b) => Date.parse(a.utcDate || 0) - Date.parse(b.utcDate || 0) || Number(a.id || 0) - Number(b.id || 0)));
-
-  for (const apiMatch of apiMatches) {
-    const stage = normalizeApiStage(apiMatch.stage);
-    if (stage !== 'Fase de grupos') continue;
-    const extId = Number(apiMatch?.id);
-    const kickoffAt = apiMatch?.utcDate || null;
-    const homeTeam = normalizeApiTeam(apiMatch?.homeTeam?.name);
-    const awayTeam = normalizeApiTeam(apiMatch?.awayTeam?.name);
-    const resultHome = toNullableInt(apiMatch?.score?.fullTime?.home);
-    const resultAway = toNullableInt(apiMatch?.score?.fullTime?.away);
-    const status = mapApiStatus(apiMatch?.status, resultHome, resultAway);
-    const existing = byExternal.get(extId) || groupByComposite.get(buildCompositeKey(homeTeam, awayTeam, kickoffAt));
-    if (!existing) continue;
-    const local = updatedIndex.get(existing.id);
-    if (applyApiToMatch(local, apiMatch, stage)) {
-      writes += 1;
-      changedMatches.push(local);
-      batch.set(db.collection('matches').doc(local.id), buildApiPatch(local), { merge: true });
-    }
-  }
-
-  for (const [stage, apiList] of groupedApiKnockout.entries()) {
-    const localList = knockoutByStage.get(stage) || [];
-    apiList.forEach((apiMatch, index) => {
-      const extId = Number(apiMatch?.id);
-      let local = byExternal.get(extId);
-      if (!local) local = localList[index];
-      if (!local) return;
-      const target = updatedIndex.get(local.id);
-      if (applyApiToMatch(target, apiMatch, stage)) {
-        writes += 1;
-        changedMatches.push(target);
-        batch.set(db.collection('matches').doc(target.id), buildApiPatch(target), { merge: true });
-      }
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
     });
   }
 
-  if (writes) await batch.commit();
-  return { updatedMatches, changedMatches };
-}
+  const db = admin.firestore();
 
-function applyApiToMatch(local, apiMatch, stage) {
-  const homeTeam = normalizeApiTeam(apiMatch?.homeTeam?.name) || local.homeTeam;
-  const awayTeam = normalizeApiTeam(apiMatch?.awayTeam?.name) || local.awayTeam;
-  const resultHome = toNullableInt(apiMatch?.score?.fullTime?.home);
-  const resultAway = toNullableInt(apiMatch?.score?.fullTime?.away);
-  const next = {
-    externalMatchId: Number(apiMatch?.id),
-    stage,
-    stageOrder: STAGE_META[stage]?.stageOrder || local.stageOrder,
-    kickoffAt: apiMatch?.utcDate || local.kickoffAt,
-    kickoffAtMs: Date.parse(apiMatch?.utcDate || local.kickoffAt),
-    dateKey: (apiMatch?.utcDate || local.kickoffAt).slice(0, 10),
-    venue: apiMatch?.venue || local.venue || 'Por definir',
-    homeTeam,
-    awayTeam,
-    resultHome,
-    resultAway,
-    winnerTeam: resolveApiWinnerTeam(apiMatch, homeTeam, awayTeam, resultHome, resultAway, stage),
-    status: mapApiStatus(apiMatch?.status, resultHome, resultAway),
-  };
-  const changed = ['externalMatchId','stage','stageOrder','kickoffAt','kickoffAtMs','dateKey','venue','homeTeam','awayTeam','resultHome','resultAway','winnerTeam','status'].some((key) => JSON.stringify(local[key]) !== JSON.stringify(next[key]));
-  if (!changed) return false;
-  Object.assign(local, next);
-  return true;
-}
+  const [usersSnap, matchesSnap, betsSnap] = await Promise.all([
+    db.collection('users').get(),
+    db.collection('matches').get(),
+    db.collection('bets').get(),
+  ]);
 
-function buildApiPatch(match) {
-  return {
-    externalMatchId: match.externalMatchId,
-    stage: match.stage,
-    stageOrder: match.stageOrder,
-    kickoffAt: match.kickoffAt,
-    kickoffAtMs: match.kickoffAtMs,
-    dateKey: match.dateKey,
-    venue: match.venue,
-    homeTeam: match.homeTeam,
-    awayTeam: match.awayTeam,
-    resultHome: match.resultHome,
-    resultAway: match.resultAway,
-    status: match.status,
-    winnerTeam: match.winnerTeam || null,
-    lastSyncedAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-  };
-}
+  const users = usersSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
+  const matches = matchesSnap.docs
+    .map((doc) => ({ id: doc.id, ...doc.data(), _ms: getMs(doc.data()) }))
+    .sort((a, b) => a._ms - b._ms || String(a.id).localeCompare(String(b.id)));
 
-async function restoreResultsFromNotifications(db, currentMatches) {
-  const matches = currentMatches.map((match) => ({ ...match }));
-  const batch = db.batch();
-  let writes = 0;
+  const matchMap = new Map(matches.map((match) => [match.id, match]));
+  const matchIds = new Set(matches.map((match) => match.id));
+  const userIds = new Set(users.map((user) => user.id));
 
-  for (const match of matches) {
-    const recovered = recoverMatchFromNotificationKey(match);
-    if (!recovered) continue;
-    Object.assign(match, recovered);
-    batch.set(db.collection('matches').doc(match.id), {
-      resultHome: match.resultHome,
-      resultAway: match.resultAway,
-      winnerTeam: match.winnerTeam || null,
-      status: match.status || 'played',
-      restoredFromNotification: true,
-      updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
-    writes += 1;
+  const scoreboard = new Map();
+
+  for (const user of users) {
+    scoreboard.set(user.id, {
+      userId: user.id,
+      name: user.displayName || user.name || user.email || user.id,
+      email: user.email || '',
+      points: 0,
+      exacts: 0,
+      secondaries: 0,
+      played: 0,
+
+      // aliases para el frontend actual
+      exactos: 0,
+      aciertos: 0,
+      pronosticos: 0,
+    });
   }
 
-  if (writes) await batch.commit();
-  return matches;
-}
+  let scoredBets = 0;
+  let ignoredBets = 0;
+  const details = [];
 
-function recoverMatchFromNotificationKey(match) {
-  if (hasFinalResult(match)) return null;
-  const key = String(match.lastNotifiedResult || '').trim();
-  const parsed = key.match(/^(\d+)-(\d+)\|(.*)$/);
-  if (!parsed) return null;
-  const resultHome = Number(parsed[1]);
-  const resultAway = Number(parsed[2]);
-  const winnerTeam = parsed[3] ? parsed[3].trim() : null;
-  return {
-    resultHome,
-    resultAway,
-    winnerTeam: winnerTeam || match.winnerTeam || null,
-    status: 'played',
-  };
-}
+  for (const doc of betsSnap.docs) {
+    const bet = doc.data();
+    const userId = guessUserId(doc.id, bet, userIds);
+    const matchId = guessMatchId(doc.id, bet, matchIds);
 
-async function resolveKnockoutMatches(db, currentMatches, groupSlots, bestThirds) {
-  const matches = currentMatches.map((match) => ({ ...match }));
-  const byId = new Map(matches.map((match) => [match.id, match]));
-  const usedThirdGroups = new Set();
-  const batch = db.batch();
-  let writes = 0;
+    if (!userId || !matchId) {
+      ignoredBets += 1;
+      continue;
+    }
 
-  const ordered = matches.filter((match) => match.stage !== 'Fase de grupos').sort((a, b) => a.stageOrder - b.stageOrder || a.sortOrder - b.sortOrder);
-  for (const match of ordered) {
-    const desiredHome = resolveSlot(match.slotHome, byId, groupSlots, bestThirds, usedThirdGroups);
-    const desiredAway = resolveSlot(match.slotAway, byId, groupSlots, bestThirds, usedThirdGroups);
-    const patch = {};
-    if (!hasConcreteTeam(match.homeTeam) || hasPlaceholderLike(match.homeTeam)) patch.homeTeam = desiredHome;
-    if (!hasConcreteTeam(match.awayTeam) || hasPlaceholderLike(match.awayTeam)) patch.awayTeam = desiredAway;
-    if (patch.homeTeam || patch.awayTeam) {
-      Object.assign(match, patch);
-      writes += 1;
-      batch.set(db.collection('matches').doc(match.id), { ...patch, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    const match = matchMap.get(matchId);
+
+    if (!match || !hasResult(match)) {
+      ignoredBets += 1;
+      continue;
+    }
+
+    const result = computePoints(match, bet);
+
+    if (!result) {
+      ignoredBets += 1;
+      continue;
+    }
+
+    if (!scoreboard.has(userId)) {
+      scoreboard.set(userId, {
+        userId,
+        name: userId,
+        email: '',
+        points: 0,
+        exacts: 0,
+        secondaries: 0,
+        played: 0,
+        exactos: 0,
+        aciertos: 0,
+        pronosticos: 0,
+      });
+    }
+
+    const row = scoreboard.get(userId);
+
+    row.points += result.points;
+    row.played += 1;
+    row.pronosticos += 1;
+
+    if (result.exact) {
+      row.exacts += 1;
+      row.exactos += 1;
+    }
+
+    if (result.secondary) {
+      row.secondaries += 1;
+      row.aciertos += 1;
+    }
+
+    scoredBets += 1;
+
+    if (WRITE_DETAIL) {
+      details.push({
+        userId,
+        userName: row.name,
+        matchId,
+        stage: match.stage || '',
+        homeTeam: match.homeTeam || '',
+        awayTeam: match.awayTeam || '',
+        resultHome: result.resultHome,
+        resultAway: result.resultAway,
+        betHome: result.betHome,
+        betAway: result.betAway,
+        points: result.points,
+        label: result.label,
+      });
     }
   }
 
-  if (writes) await batch.commit();
-  return { matches };
-}
-
-function resolveSlot(slot, byId, groupSlots, bestThirds, usedThirdGroups) {
-  if (!slot) return 'Por definir';
-  if (/^[12]º Grupo /i.test(slot)) return groupSlots[slot] || slot;
-  if (/^Mejor 3º /i.test(slot)) return resolveBestThird(slot, bestThirds, usedThirdGroups) || slot;
-  if (/^Ganador /i.test(slot)) {
-    const ref = byId.get(slot.replace('Ganador ', '').trim());
-    return getWinner(ref) || slot;
-  }
-  if (/^Perdedor /i.test(slot)) {
-    const ref = byId.get(slot.replace('Perdedor ', '').trim());
-    return getLoser(ref) || slot;
-  }
-  return slot;
-}
-
-function resolveBestThird(slot, bestThirds, usedThirdGroups) {
-  const allowed = slot.replace('Mejor 3º ', '').split('/').map((item) => item.trim());
-  const candidate = bestThirds.find((team) => allowed.includes(team.group) && !usedThirdGroups.has(team.group));
-  if (!candidate) return null;
-  usedThirdGroups.add(candidate.group);
-  return candidate.team;
-}
-
-function normalizeStandings(standings) {
-  return standings.map((entry) => ({
-    group: normalizeGroupCode(entry.group || entry.stage || ''),
-    type: entry.type || '',
-    table: (entry.table || []).map((row) => ({
-      position: row.position,
-      team: normalizeApiTeam(row.team?.name || ''),
-      playedGames: row.playedGames,
-      won: row.won,
-      draw: row.draw,
-      lost: row.lost,
-      goalsFor: row.goalsFor,
-      goalsAgainst: row.goalsAgainst,
-      goalDifference: row.goalDifference,
-      points: row.points,
-    })),
-  })).filter((entry) => entry.group);
-}
-
-function buildGroupSlots(standings) {
-  const groupSlots = {};
-  const thirds = [];
-  standings.forEach((entry) => {
-    const letter = entry.group;
-    const sorted = [...entry.table].sort((a, b) => a.position - b.position);
-    if (sorted[0]) groupSlots[`1º Grupo ${letter}`] = sorted[0].team;
-    if (sorted[1]) groupSlots[`2º Grupo ${letter}`] = sorted[1].team;
-    if (sorted[2]) thirds.push({ group: letter, team: sorted[2].team, points: sorted[2].points, gd: sorted[2].goalDifference, gf: sorted[2].goalsFor });
+  const rows = [...scoreboard.values()].sort((a, b) => {
+    return (
+      b.points - a.points ||
+      b.exacts - a.exacts ||
+      b.secondaries - a.secondaries ||
+      a.name.localeCompare(b.name)
+    );
   });
-  const bestThirds = thirds.sort((a, b) => b.points - a.points || b.gd - a.gd || b.gf - a.gf || a.team.localeCompare(b.team, 'es')).slice(0, 8);
-  return { groupSlots, bestThirds };
-}
 
-function buildRanking(matches, bets, users) {
-  const matchById = new Map(matches.map((match) => [match.id, match]));
-  return users.map((user) => {
-    const uid = user.uid || user.id;
-    const userBets = bets.filter((bet) => bet.uid === uid);
-    let points = 0;
-    let exact = 0;
-    let outcomes = 0;
-    for (const bet of userBets) {
-      const match = matchById.get(bet.matchId);
-      if (!match || !hasFinalResult(match)) continue;
-      const betPoints = calculatePointsForBet(bet, match);
-      points += betPoints;
-      if (isExactBet(bet, match)) exact += 1;
-      if (didBetHitSecondaryRule(bet, match)) outcomes += 1;
-    }
-    return { uid, name: user.displayName || user.email || 'Usuario', email: user.email || '', points, exact, outcomes, bets: userBets.length };
-  }).sort((a, b) => b.points - a.points || b.exact - a.exact || b.outcomes - a.outcomes || a.name.localeCompare(b.name, 'es'));
-}
-
-function calculatePointsForBet(bet, match) {
-  if (!hasFinalResult(match)) return 0;
-  if (isExactBet(bet, match)) return STAGE_META[match.stage]?.exactPoints || 4;
-  if (didBetHitSecondaryRule(bet, match)) return 2;
-  return 1;
-}
-
-function buildBracketPayload(matches) {
-  return Object.keys(STAGE_META).filter((stage) => STAGE_META[stage].stageOrder > 1).map((stage) => ({
-    stage,
-    matches: matches.filter((match) => match.stage === stage).sort((a, b) => a.sortOrder - b.sortOrder).map((match) => ({
-      id: match.id,
-      homeTeam: match.homeTeam,
-      awayTeam: match.awayTeam,
-      resultHome: match.resultHome,
-      resultAway: match.resultAway,
-      winnerTeam: match.winnerTeam || null,
-      kickoffAt: match.kickoffAt,
-      dateKey: match.dateKey,
-    })),
-  }));
-}
-
-async function sendViaAppsScript(payload) {
-  const response = await fetch(APPS_SCRIPT_WEBAPP_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: APPS_SCRIPT_SHARED_TOKEN, ...payload }),
+  rows.forEach((row, index) => {
+    row.position = index + 1;
   });
-  const text = await response.text();
-  let data = null;
-  try { data = JSON.parse(text); } catch (_error) { throw new Error(`Apps Script devolvió una respuesta no JSON: ${text}`); }
-  if (!response.ok || !data.ok) throw new Error(`Apps Script rechazó la petición: ${text}`);
-  console.log('Apps Script response:', text);
-}
 
-async function markNotified(db, match) {
-  await db.collection('matches').doc(match.id).set({
-    lastNotifiedResult: getNotificationKey(match),
-    lastNotifiedAt: FieldValue.serverTimestamp(),
-  }, { merge: true });
-}
-
-function buildEmailHtml({ user, match, bet, points, row, position, ranking }) {
-  const exactValue = STAGE_META[match.stage]?.exactPoints || 4;
-  const top = ranking.slice(0, 5).map((r, i) => `<li>${i + 1}. ${escapeHtml(r.name)} · ${r.points} pts</li>`).join('');
-  const cta = SITE_URL ? `<p><a href="${SITE_URL}" target="_blank" rel="noreferrer">Abrir El Prode Mundialista</a></p>` : '';
-  const winnerLine = match.winnerTeam ? `<p>Clasificado / ganador de la llave: <strong>${escapeHtml(match.winnerTeam)}</strong>.</p>` : '';
-  const betLine = `<p>Tu apuesta fue <strong>${bet.home}-${bet.away}${bet.winnerTeam ? ` · clasifica ${escapeHtml(bet.winnerTeam)}` : ''}</strong> y sumaste <strong>${points} ${points === 1 ? 'punto' : 'puntos'}</strong>.</p>`;
-  return `<div style="font-family:Arial,sans-serif;color:#14314f;line-height:1.55"><h2 style="margin:0 0 12px">El Prode Mundialista</h2><p>Hola <strong>${escapeHtml(user.displayName || user.email || 'usuario')}</strong>, ya se actualizó un partido.</p><p><strong>${escapeHtml(match.homeTeam)} ${match.resultHome}-${match.resultAway} ${escapeHtml(match.awayTeam)}</strong></p>${winnerLine}${betLine}<p>Regla aplicada en ${escapeHtml(match.stage)}: exacto = ${exactValue}, signo/clasificado = 2, fallo con apuesta = 1, sin jugar = 0.</p><p>Ahora estás en la posición <strong>#${position}</strong> con <strong>${row?.points || 0} pts</strong>.</p><h3 style="margin:20px 0 8px">Clasificación actual</h3><ol style="padding-left:20px;margin:0">${top}</ol>${cta}</div>`;
-}
-
-function buildEmailText({ user, match, bet, points, row, position, ranking }) {
-  const exactValue = STAGE_META[match.stage]?.exactPoints || 4;
-  return [
-    'El Prode Mundialista', '', `Hola ${user.displayName || user.email || 'usuario'}, ya se actualizó un partido.`, `${match.homeTeam} ${match.resultHome}-${match.resultAway} ${match.awayTeam}`,
-    match.winnerTeam ? `Clasificado / ganador de la llave: ${match.winnerTeam}` : '',
-    `Tu apuesta: ${bet.home}-${bet.away}${bet.winnerTeam ? ` · clasifica ${bet.winnerTeam}` : ''}`,
-    `Puntos ganados: ${points}`,
-    `Regla aplicada en ${match.stage}: exacto=${exactValue}, signo/clasificado=2, fallo con apuesta=1, sin jugar=0`,
-    `Posición actual: #${position}`,
-    `Puntos totales: ${row?.points || 0}`,
-    '', 'Clasificación actual:',
-    ...ranking.slice(0, 5).map((r, i) => `${i + 1}. ${r.name} · ${r.points} pts`),
-    SITE_URL ? `Abrir app: ${SITE_URL}` : ''
-  ].filter(Boolean).join('\n');
-}
-
-function hasFinalResult(match) { return Number.isInteger(match.resultHome) && Number.isInteger(match.resultAway); }
-function getOutcome(home, away) { return home > away ? 'home' : home < away ? 'away' : 'draw'; }
-function isKnockoutMatch(match) { return String(match?.stage || '') !== 'Fase de grupos'; }
-function getQualifiedTeam(match) {
-  if (!hasFinalResult(match)) return null;
-  if (match.winnerTeam) return match.winnerTeam;
-  if (match.resultHome > match.resultAway) return match.homeTeam;
-  if (match.resultAway > match.resultHome) return match.awayTeam;
-  return null;
-}
-function normalizeWinnerPickForBet(match, home, away, winnerTeam) {
-  if (!isKnockoutMatch(match)) return null;
-  if (home > away) return match.homeTeam;
-  if (home < away) return match.awayTeam;
-  return winnerTeam || null;
-}
-function isExactBet(bet, match) {
-  if (bet.home !== match.resultHome || bet.away !== match.resultAway) return false;
-  if (!isKnockoutMatch(match) || match.resultHome !== match.resultAway) return true;
-  return !!bet.winnerTeam && bet.winnerTeam === getQualifiedTeam(match);
-}
-function didBetHitSecondaryRule(bet, match) {
-  if (isKnockoutMatch(match)) return normalizeWinnerPickForBet(match, bet.home, bet.away, bet.winnerTeam) === getQualifiedTeam(match);
-  return getOutcome(bet.home, bet.away) === getOutcome(match.resultHome, match.resultAway);
-}
-function getNotificationKey(match) {
-  return `${match.resultHome}-${match.resultAway}|${match.winnerTeam || ''}`;
-}
-function hasConcreteTeam(name) { return !!name && !hasPlaceholderLike(name); }
-function hasPlaceholderLike(name) { return /^(1º|2º|Mejor 3º|Ganador|Perdedor|Por definir)/i.test(String(name || '')); }
-function getWinner(match) {
-  if (!match || !hasFinalResult(match)) return null;
-  if (match.winnerTeam) return match.winnerTeam;
-  if (match.resultHome > match.resultAway) return match.homeTeam;
-  if (match.resultAway > match.resultHome) return match.awayTeam;
-  return `${match.homeTeam} / ${match.awayTeam}`;
-}
-function getLoser(match) {
-  if (!match || !hasFinalResult(match)) return null;
-  if (match.winnerTeam === match.homeTeam) return match.awayTeam;
-  if (match.winnerTeam === match.awayTeam) return match.homeTeam;
-  if (match.resultHome < match.resultAway) return match.homeTeam;
-  if (match.resultAway < match.resultHome) return match.awayTeam;
-  return `${match.homeTeam} / ${match.awayTeam}`;
-}
-
-function normalizeMatch(raw) {
-  const stage = raw.stage || 'Fase de grupos';
-  const stageMeta = STAGE_META[stage] || STAGE_META['Fase de grupos'];
-  const kickoffAt = raw.kickoffAt || `${raw.dateKey || '2026-06-11'}T12:00:00Z`;
-  return {
-    ...raw,
-    stage,
-    stageOrder: Number.isInteger(raw.stageOrder) ? raw.stageOrder : stageMeta.stageOrder,
-    group: raw.group || '',
-    homeTeam: raw.homeTeam || raw.slotHome || raw.home || 'Por definir',
-    awayTeam: raw.awayTeam || raw.slotAway || raw.away || 'Por definir',
-    slotHome: raw.slotHome || raw.home || null,
-    slotAway: raw.slotAway || raw.away || null,
-    kickoffAt,
-    kickoffAtMs: raw.kickoffAtMs || Date.parse(kickoffAt),
-    dateKey: raw.dateKey || kickoffAt.slice(0, 10),
-    venue: raw.venue || 'Por definir',
-    sortOrder: Number.isInteger(raw.sortOrder) ? raw.sortOrder : 999,
-    resultHome: Number.isInteger(raw.resultHome) ? raw.resultHome : null,
-    resultAway: Number.isInteger(raw.resultAway) ? raw.resultAway : null,
-    winnerTeam: raw.winnerTeam || null,
-    status: raw.status || 'scheduled',
-  };
-}
-
-function normalizeApiStage(stage) {
-  const value = String(stage || '').toUpperCase();
-  if (!value || value.includes('GROUP')) return 'Fase de grupos';
-  for (const [name, meta] of Object.entries(STAGE_META)) {
-    if ((meta.apiAliases || []).includes(value)) return name;
+  console.log('🏆 Ranking recalculado desde Firestore');
+  for (const row of rows) {
+    console.log(
+      `${row.position}. ${row.name} · ${row.points} pts · ` +
+      `exactos ${row.exactos} · aciertos ${row.aciertos} · pronósticos ${row.pronosticos}`
+    );
   }
-  return null;
-}
 
-function normalizeApiTeam(name) {
-  const n = String(name || '').trim();
-  const aliases = {
-    'United States': 'Estados Unidos', 'USA': 'Estados Unidos', 'Korea Republic': 'Corea del Sur', 'Czechia': 'Chequia', 'Netherlands': 'Países Bajos',
-    'IR Iran': 'Irán', 'Ivory Coast': 'Costa de Marfil', 'DR Congo': 'RD Congo', 'Cape Verde': 'Cabo Verde', 'Saudi Arabia': 'Arabia Saudita',
-    'New Zealand': 'Nueva Zelanda', 'Bosnia-Herzegovina': 'Bosnia y Herzegovina', 'Scotland': 'Escocia', 'England': 'Inglaterra'
-  };
-  if (!n || /TBD|TO BE DETERMINED|WINNER|RUNNER-UP/i.test(n)) return '';
-  return aliases[n] || n;
-}
+  console.log('');
+  console.log(`- Usuarios: ${users.length}`);
+  console.log(`- Partidos totales: ${matches.length}`);
+  console.log(`- Partidos con resultHome/resultAway: ${matches.filter(hasResult).length}`);
+  console.log(`- Apuestas leídas: ${betsSnap.docs.length}`);
+  console.log(`- Apuestas puntuadas: ${scoredBets}`);
+  console.log(`- Apuestas ignoradas/no puntuables: ${ignoredBets}`);
 
-function normalizeGroupCode(value) {
-  const raw = String(value || '').toUpperCase();
-  const match = raw.match(/([A-L])$/);
-  return match ? match[1] : '';
-}
-
-function toNullableInt(value) { return Number.isInteger(value) ? Number(value) : null; }
-function resolveApiWinnerTeam(apiMatch, homeTeam, awayTeam, resultHome, resultAway, stage) {
-  const winnerCode = String(apiMatch?.score?.winner || '').toUpperCase();
-  if (winnerCode === 'HOME_TEAM') return homeTeam;
-  if (winnerCode === 'AWAY_TEAM') return awayTeam;
-  if (!isKnockoutMatch({ stage })) return null;
-  if (Number.isInteger(resultHome) && Number.isInteger(resultAway)) {
-    if (resultHome > resultAway) return homeTeam;
-    if (resultAway > resultHome) return awayTeam;
+  if (WRITE_DETAIL) {
+    fs.mkdirSync('reports', { recursive: true });
+    fs.writeFileSync(
+      path.join('reports', 'ranking-detail-safe-recalculate.json'),
+      JSON.stringify(details, null, 2),
+      'utf8'
+    );
+    console.log('- Detalle escrito en reports/ranking-detail-safe-recalculate.json');
   }
-  return null;
+
+  if (!APPLY) {
+    console.log('');
+    console.log('Modo dry-run: no se escribió nada. Usa --apply para guardar ranking/current.');
+    return;
+  }
+
+  await db.collection('ranking').doc('current').set(
+    {
+      rows,
+      totalUsers: rows.length,
+      totalMatches: matches.length,
+      matchesWithResult: matches.filter(hasResult).length,
+      scoredBets,
+      ignoredBets,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      source: 'safe-recalculate-no-result-fetch-v2',
+    },
+    { merge: true }
+  );
+
+  console.log('');
+  console.log('✅ ranking/current guardado en Firestore.');
+  console.log('✅ No se consultó ninguna API externa.');
+  console.log('✅ No se modificó ningún resultado en matches.');
 }
-function mapApiStatus(apiStatus, home, away) { if (Number.isInteger(home) && Number.isInteger(away)) return 'played'; if (['IN_PLAY', 'PAUSED', 'LIVE'].includes(apiStatus)) return 'in_play'; return 'scheduled'; }
-function buildCompositeKey(homeTeam, awayTeam, kickoffAt) { return `${String(homeTeam || '').trim().toLowerCase()}__${String(awayTeam || '').trim().toLowerCase()}__${kickoffAt || ''}`; }
-function parseJsonEnv(name) { const raw = process.env[name]; return raw ? JSON.parse(raw) : null; }
-async function readJsonFile(path) { const raw = await readFile(path, 'utf-8'); return JSON.parse(raw); }
-async function fetchJson(url, apiKey) { const response = await fetch(url, { headers: { 'X-Auth-Token': apiKey } }); if (!response.ok) throw new Error(`Error ${response.status} consultando ${url}: ${await response.text()}`); return response.json(); }
-function escapeHtml(value) { return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
+
+main().catch((error) => {
+  console.error('❌ Error:', error.message);
+  process.exit(1);
+});
